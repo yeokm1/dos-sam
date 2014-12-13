@@ -19,6 +19,7 @@ extern unsigned char mem39;
 extern unsigned char mem50;
 extern unsigned char mem51;
 extern unsigned char mem53;
+
 extern unsigned char mem56;
 
 extern unsigned char speed;
@@ -123,6 +124,70 @@ void Write(unsigned char p, unsigned char Y, unsigned char value)
 
 
 
+void RenderVoicedSample(unsigned char * mem66)
+{
+	unsigned char phase1;
+
+   // number of samples?
+	phase1 = A ^ 255;
+
+	Y = *mem66;
+	do
+	{
+		//pos48321:
+
+        // shift through all 8 bits
+		mem56 = 8;
+		//A = Read(mem47, Y);
+		
+		// fetch value from table
+		A = sampleTable[mem47*256+Y];
+
+        // loop 8 times
+		//pos48327:
+		do
+		{
+			//48327: ASL A
+			//48328: BCC 48337
+			
+			// left shift and check high bit
+			unsigned char tempA = A;
+			A = A << 1;
+			if ((tempA & 128) != 0)
+			{
+                // if bit set, output 26
+				X = 26;
+				Output(3, X);
+			} else
+			{
+				//timetable 4
+				// bit is not set, output a 6
+				X=6;
+				Output(4, X);
+			}
+
+			mem56--;
+		} while(mem56 != 0);
+
+        // move ahead in the table
+		Y++;
+		
+		// continue until counter done
+		phase1++;
+
+	} while (phase1 != 0);
+	//	if (phase1 != 0) goto pos48321;
+	
+	// restore values and return
+	A = 1;
+	mem44 = 1;
+	*mem66 = Y;
+	Y = mem49;
+	return;
+
+}
+
+
 // -------------------------------------------------------------------------
 //Code48227
 // Render a sampled sound from the sampleTable.
@@ -213,7 +278,8 @@ void RenderSample(unsigned char *mem66)
 		A = pitches[mem49] >> 4;
 		
 		// jump to voiced portion
-		goto pos48315;
+		RenderVoicedSample(mem66);
+        return;
 	}
 	
 	Y = A ^ 255;
@@ -267,68 +333,6 @@ pos48296:
 	Y = mem49;
 	return;
 
-
-	unsigned char phase1;
-
-pos48315:
-// handle voiced samples here
-
-   // number of samples?
-	phase1 = A ^ 255;
-
-	Y = *mem66;
-	do
-	{
-		//pos48321:
-
-        // shift through all 8 bits
-		mem56 = 8;
-		//A = Read(mem47, Y);
-		
-		// fetch value from table
-		A = sampleTable[mem47*256+Y];
-
-        // loop 8 times
-		//pos48327:
-		do
-		{
-			//48327: ASL A
-			//48328: BCC 48337
-			
-			// left shift and check high bit
-			tempA = A;
-			A = A << 1;
-			if ((tempA & 128) != 0)
-			{
-                // if bit set, output 26
-				X = 26;
-				Output(3, X);
-			} else
-			{
-				//timetable 4
-				// bit is not set, output a 6
-				X=6;
-				Output(4, X);
-			}
-
-			mem56--;
-		} while(mem56 != 0);
-
-        // move ahead in the table
-		Y++;
-		
-		// continue until counter done
-		phase1++;
-
-	} while (phase1 != 0);
-	//	if (phase1 != 0) goto pos48321;
-	
-	// restore values and return
-	A = 1;
-	mem44 = 1;
-	*mem66 = Y;
-	Y = mem49;
-	return;
 }
 
 
@@ -394,7 +398,6 @@ do
 	if (A == 1)
 	{
        // add rising inflection
-		A = 1;
 		mem48 = 1;
 		//goto pos48376;
 		AddInflection(mem48, phase1);
