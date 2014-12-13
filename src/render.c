@@ -124,67 +124,19 @@ void Write(unsigned char p, unsigned char Y, unsigned char value)
 
 
 
-void RenderVoicedSample(unsigned char * mem66)
+unsigned char RenderVoicedSample(unsigned char hibyte, unsigned char off, unsigned char phase1)
 {
-	unsigned char phase1;
-
-   // number of samples?
-	phase1 = A ^ 255;
-
-	Y = *mem66;
-	do
-	{
-		//pos48321:
-
-        // shift through all 8 bits
-		mem56 = 8;
-		//A = Read(mem47, Y);
-		
-		// fetch value from table
-		A = sampleTable[mem47*256+Y];
-
-        // loop 8 times
-		//pos48327:
-		do
-		{
-			//48327: ASL A
-			//48328: BCC 48337
-			
-			// left shift and check high bit
-			unsigned char tempA = A;
-			A = A << 1;
-			if ((tempA & 128) != 0)
-			{
-                // if bit set, output 26
-				X = 26;
-				Output(3, X);
-			} else
-			{
-				//timetable 4
-				// bit is not set, output a 6
-				X=6;
-				Output(4, X);
-			}
-
-			mem56--;
-		} while(mem56 != 0);
-
-        // move ahead in the table
-		Y++;
-		
-		// continue until counter done
-		phase1++;
-
-	} while (phase1 != 0);
-	//	if (phase1 != 0) goto pos48321;
-	
-	// restore values and return
-	A = 1;
-	mem44 = 1;
-	*mem66 = Y;
-	Y = mem49;
-	return;
-
+	do {
+		unsigned char sample = sampleTable[hibyte*256+off];
+		unsigned char bit = 8;
+		do {
+			if ((sample & 128) != 0) Output(3, 26);
+			else Output(4, 6);
+			sample <<= 1;
+		} while(--bit != 0);
+		off++;
+	} while (++phase1 != 0);
+	return off;
 }
 
 
@@ -276,9 +228,8 @@ void RenderSample(unsigned char *mem66)
         // voiced phoneme: Z*, ZH, V*, DH
 		Y = mem49;
 		A = pitches[mem49] >> 4;
-		
-		// jump to voiced portion
-		RenderVoicedSample(mem66);
+        *mem66 = RenderVoicedSample(mem47, *mem66, A ^ 255);
+        mem44 = 1;
         return;
 	}
 	
