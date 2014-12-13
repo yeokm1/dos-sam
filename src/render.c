@@ -856,27 +856,24 @@ void AddInflection(unsigned char mem48, unsigned char phase1)
 	// ML : A =, fixes a problem with invalid pitch with '.'
 	while( (A=pitches[X]) == 127) X++;
 
+    while (1)
+    {
+        // add the inflection direction
+        A += mem48;
+        phase1 = A;
+	
+        // set the inflection
+        pitches[X] = A;
 
-pos48398:
-	//48398: CLC
-	//48399: ADC 48
-	
-	// add the inflection direction
-	A += mem48;
-	phase1 = A;
-	
-	// set the inflection
-	pitches[X] = A;
-pos48406:
-         
-    // increment the position
-	X++;
-	
-	// exit if the punctuation has been reached
-	if (X == mem49) return; //goto pos47615;
-	if (pitches[X] == 255) goto pos48406;
-	A = phase1;
-	goto pos48398;
+        do {
+            // increment the position
+            X++;
+        
+            // exit if the punctuation has been reached
+            if (X == mem49) return;
+        } while (pitches[X] == 255);
+        A = phase1;
+    } 
 }
 
 /*
