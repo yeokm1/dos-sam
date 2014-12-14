@@ -239,6 +239,92 @@ void RenderSample(unsigned char *mem66)
 }
 
 
+// PROCESS THE FRAMES
+//
+// In traditional vocal synthesis, the glottal pulse drives filters, which
+// are attenuated to the frequencies of the formants.
+//
+// SAM generates these formants directly with sin and rectangular waves.
+// To simulate them being driven by the glottal pulse, the waveforms are
+// reset at the beginning of each glottal pulse.
+//
+void ProcessFrames(unsigned char mem48, unsigned char phase1, unsigned char phase2,
+                   unsigned char phase3, unsigned char speedcounter, unsigned char mem38)
+{
+    unsigned char mem66;
+
+	while(1) {
+		mem39 = sampledConsonantFlag[Y];
+		
+		// unvoiced sampled phoneme?
+        if(mem39 & 248) {
+			RenderSample(&mem66);
+			// skip ahead two in the phoneme buffer
+			Y += 2;
+			mem48 -= 2;
+            if(mem48 == 0) 	return;
+            speedcounter = speed;
+		} else {
+            // simulate the glottal pulse and formants
+			unsigned char mem56 = multtable[sinus[phase1] | amplitude1[Y]];
+			unsigned char carry = ((mem56+multtable[sinus[phase2] | amplitude2[Y]] ) > 255);
+			mem56 += multtable[sinus[phase2] | amplitude2[Y]];
+			unsigned char A = mem56 + multtable[rectangle[phase3] | amplitude3[Y]] + (carry?1:0);
+			A = ((A + 136) & 255) >> 4; //there must be also a carry
+			
+			// output the accumulated value
+			Output(0, A);
+			speedcounter--;
+			if (speedcounter == 0) { 
+                Y++; //go to next amplitude
+                // decrement the frame count
+                mem48--;
+                if(mem48 == 0) 	return;
+                speedcounter = speed;
+            }
+		}
+         
+        // decrement the remaining length of the glottal pulse
+		mem44--;
+		
+		// finished with a glottal pulse?
+		if(mem44 == 0) {
+pos48159:
+            // fetch the next glottal pulse length
+			
+			mem44 = pitches[Y];
+			mem38 = A = mem44 - (mem44>>2);
+			
+			// reset the formant wave generators to keep them in 
+			// sync with the glottal pulse
+			phase1 = 0;
+			phase2 = 0;
+			phase3 = 0;
+			continue;
+		}
+		
+		// decrement the count
+		mem38--;
+		
+		// is the count non-zero and the sampled flag is zero?
+		if((mem38 != 0) || (mem39 == 0))
+		{
+            // reset the phase of the formants to match the pulse
+			phase1 += frequency1[Y];
+			phase2 += frequency2[Y];
+			phase3 += frequency3[Y];
+			continue;
+		}
+		
+		// voiced sampled phonemes interleave the sample with the
+		// glottal pulse. The sample flag is non-zero, so render
+		// the sample for the phoneme.
+		RenderSample(&mem66);
+		goto pos48159;
+	} //while
+
+}
+
 
 // RENDER THE PHONEMES IN THE LIST
 //
@@ -262,13 +348,11 @@ void Render()
 	unsigned char phase1 = 0;  //mem43
 	unsigned char phase2;
 	unsigned char phase3;
-	unsigned char mem66;
 	unsigned char mem38;
 	unsigned char mem40;
 	unsigned char speedcounter; //mem45
 	unsigned char mem48;
 	int i;
-	int carry;
 	if (phonemeIndexOutput[0] == 255) return; //exit if no data
 
 	A = 0;
@@ -588,152 +672,7 @@ if (debug)
 	PrintOutput(sampledConsonantFlag, frequency1, frequency2, frequency3, amplitude1, amplitude2, amplitude3, pitches);
 }
 
-// PROCESS THE FRAMES
-//
-// In traditional vocal synthesis, the glottal pulse drives filters, which
-// are attenuated to the frequencies of the formants.
-//
-// SAM generates these formants directly with sin and rectangular waves.
-// To simulate them being driven by the glottal pulse, the waveforms are
-// reset at the beginning of each glottal pulse.
-
-	//finally the loop for sound output
-	//pos48078:
-	while(1)
-	{
-        // get the sampled information on the phoneme
-		A = sampledConsonantFlag[Y];
-		mem39 = A;
-		
-		// unvoiced sampled phoneme?
-		A = A & 248;
-		if(A != 0)
-		{
-            // render the sample for the phoneme
-			RenderSample(&mem66);
-			
-			// skip ahead two in the phoneme buffer
-			Y += 2;
-			mem48 -= 2;
-		} else
-		{
-            // simulate the glottal pulse and formants
-			mem56 = multtable[sinus[phase1] | amplitude1[Y]];
-
-			carry = 0;
-			if ((mem56+multtable[sinus[phase2] | amplitude2[Y]] ) > 255) carry = 1;
-			mem56 += multtable[sinus[phase2] | amplitude2[Y]];
-			A = mem56 + multtable[rectangle[phase3] | amplitude3[Y]] + (carry?1:0);
-			A = ((A + 136) & 255) >> 4; //there must be also a carry
-			//mem[54296] = A;
-			
-			// output the accumulated value
-			Output(0, A);
-			speedcounter--;
-			if (speedcounter != 0) goto pos48155;
-			Y++; //go to next amplitude
-			
-			// decrement the frame count
-			mem48--;
-		}
-		
-		// if the frame count is zero, exit the loop
-		if(mem48 == 0) 	return;
-		speedcounter = speed;
-pos48155:
-         
-        // decrement the remaining length of the glottal pulse
-		mem44--;
-		
-		// finished with a glottal pulse?
-		if(mem44 == 0)
-		{
-pos48159:
-            // fetch the next glottal pulse length
-			A = pitches[Y];
-			mem44 = A;
-			A = A - (A>>2);
-			mem38 = A;
-			
-			// reset the formant wave generators to keep them in 
-			// sync with the glottal pulse
-			phase1 = 0;
-			phase2 = 0;
-			phase3 = 0;
-			continue;
-		}
-		
-		// decrement the count
-		mem38--;
-		
-		// is the count non-zero and the sampled flag is zero?
-		if((mem38 != 0) || (mem39 == 0))
-		{
-            // reset the phase of the formants to match the pulse
-			phase1 += frequency1[Y];
-			phase2 += frequency2[Y];
-			phase3 += frequency3[Y];
-			continue;
-		}
-		
-		// voiced sampled phonemes interleave the sample with the
-		// glottal pulse. The sample flag is non-zero, so render
-		// the sample for the phoneme.
-		RenderSample(&mem66);
-		goto pos48159;
-	} //while
-
-
-    // The following code is never reached. It's left over from when
-    // the voiced sample code was part of this loop, instead of part
-    // of RenderSample();
-
-	//pos48315:
-	int tempA;
-	phase1 = A ^ 255;
-	Y = mem66;
-	do
-	{
-		//pos48321:
-
-		mem56 = 8;
-		A = Read(mem47, Y);
-
-		//pos48327:
-		do
-		{
-			//48327: ASL A
-			//48328: BCC 48337
-			tempA = A;
-			A = A << 1;
-			if ((tempA & 128) != 0)
-			{
-				X = 26;
-				// mem[54296] = X;
-				bufferpos += 150;
-				buffer[bufferpos/50] = (X & 15)*16;
-			} else
-			{
-				//mem[54296] = 6;
-				X=6; 
-				bufferpos += 150;
-				buffer[bufferpos/50] = (X & 15)*16;
-			}
-
-			for(X = wait2; X>0; X--); //wait
-			mem56--;
-		} while(mem56 != 0);
-
-		Y++;
-		phase1++;
-
-	} while (phase1 != 0);
-	//	if (phase1 != 0) goto pos48321;
-	A = 1;
-	mem44 = 1;
-	mem66 = Y;
-	Y = mem49;
-	return;
+ ProcessFrames(mem48,phase1,phase2,phase3, speedcounter,mem38);
 }
 
 
