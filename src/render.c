@@ -215,7 +215,7 @@ void RenderSample(unsigned char *mem66)
 
 	// mask low three bits and subtract 1 get value to 
 	// convert 0 bits on unvoiced samples.
-	unsigned char mem56 = (mem39&7)-1;
+	unsigned char hibyte = (mem39&7)-1;
 	
 	// determine which offset to use from table { 0x18, 0x1A, 0x17, 0x17, 0x17 }
 	// T, S, Z                0          0x18
@@ -226,7 +226,7 @@ void RenderSample(unsigned char *mem66)
 
     mem44 = 1;
 	
-    unsigned short hi = mem56*256;
+    unsigned short hi = hibyte*256;
 	// voiced sample?
 	unsigned char pitch = mem39 & 248;
 	if(pitch == 0) {
@@ -235,7 +235,7 @@ void RenderSample(unsigned char *mem66)
         *mem66 = RenderVoicedSample(hi, *mem66, pitch ^ 255);
         return;
 	}
-    RenderUnvoicedSample(hi, pitch^255, tab48426[mem56]);
+    RenderUnvoicedSample(hi, pitch^255, tab48426[hibyte]);
 }
 
 
@@ -248,10 +248,19 @@ void RenderSample(unsigned char *mem66)
 // To simulate them being driven by the glottal pulse, the waveforms are
 // reset at the beginning of each glottal pulse.
 //
-void ProcessFrames(unsigned char mem48, unsigned char phase1, unsigned char phase2,
-                   unsigned char phase3, unsigned char speedcounter, unsigned char mem38)
+void ProcessFrames(unsigned char mem48)
 {
+
+    unsigned char speedcounter = 72;
+	unsigned char phase1 = 0;
+    unsigned char phase2 = 0;
+	unsigned char phase3 = 0;
     unsigned char mem66;
+    
+    Y = 0;
+    mem44 = pitches[0];
+
+    unsigned char mem38 = mem44 - (mem44 >> 2);
 
 	while(1) {
 		mem39 = sampledConsonantFlag[Y];
@@ -326,108 +335,6 @@ pos48159:
 }
 
 
-// RENDER THE PHONEMES IN THE LIST
-//
-// The phoneme list is converted into sound through the steps:
-//
-// 1. Copy each phoneme <length> number of times into the frames list,
-//    where each frame represents 10 milliseconds of sound.
-//
-// 2. Determine the transitions lengths between phonemes, and linearly
-//    interpolate the values across the frames.
-//
-// 3. Offset the pitches by the fundamental frequency.
-//
-// 4. Render the each frame.
-
-
-
-//void Code47574()
-void Render()
-{
-	unsigned char phase1 = 0;  //mem43
-	unsigned char phase2;
-	unsigned char phase3;
-	unsigned char mem38;
-	unsigned char mem40;
-	unsigned char speedcounter; //mem45
-	unsigned char mem48;
-	int i;
-	if (phonemeIndexOutput[0] == 255) return; //exit if no data
-
-	A = 0;
-	X = 0;
-	mem44 = 0;
-
-
-// CREATE FRAMES
-//
-// The length parameter in the list corresponds to the number of frames
-// to expand the phoneme to. Each frame represents 10 milliseconds of time.
-// So a phoneme with a length of 7 = 7 frames = 70 milliseconds duration.
-//
-// The parameters are copied from the phoneme to the frame verbatim.
-
-
-// pos47587:
-do
-{
-    // get the index
-	Y = mem44;
-	// get the phoneme at the index
-	A = phonemeIndexOutput[mem44];
-	mem56 = A;
-	
-	// if terminal phoneme, exit the loop
-	if (A == 255) break;
-	
-	// period phoneme *.
-	if (A == 1)
-	{
-       // add rising inflection
-		mem48 = 1;
-		//goto pos48376;
-		AddInflection(mem48, phase1);
-	}
-	/*
-	if (A == 2) goto pos48372;
-	*/
-	
-	// question mark phoneme?
-	if (A == 2)
-	{
-        // create falling inflection
-		mem48 = 255;
-		AddInflection(mem48, phase1);
-	}
-	//	pos47615:
-
-    // get the stress amount (more stress = higher pitch)
-	phase1 = tab47492[stressOutput[Y] + 1];
-	
-    // get number of frames to write
-	phase2 = phonemeLengthOutput[Y];
-	Y = mem56;
-	
-	// copy from the source to the frames list
-	do
-	{
-		frequency1[X] = freq1data[Y];     // F1 frequency
-		frequency2[X] = freq2data[Y];     // F2 frequency
-		frequency3[X] = freq3data[Y];     // F3 frequency
-		amplitude1[X] = ampl1data[Y];     // F1 amplitude
-		amplitude2[X] = ampl2data[Y];     // F2 amplitude
-		amplitude3[X] = ampl3data[Y];     // F3 amplitude
-		sampledConsonantFlag[X] = sampledConsonantFlags[Y];        // phoneme data for sampled consonants
-		pitches[X] = pitch + phase1;      // pitch
-		X++;
-		phase2--;
-	} while(phase2 != 0);
-	mem44++;
-} while(mem44 != 0);
-// -------------------
-//pos47694:
-
 
 // CREATE TRANSITIONS
 //
@@ -463,166 +370,201 @@ do
 // pitch from the center of the current phoneme to the center of the next
 // phoneme.
 
-	A = 0;
+unsigned char CreateTransitions()
+{
+    unsigned char phase1;
+    unsigned char phase2;
+	unsigned char A = 0;
 	mem44 = 0;
-	mem49 = 0; // mem49 starts at as 0
-	X = 0;
-	while(1) //while No. 1
-	{
- 
+	mem49 = 0; 
+	unsigned char pos = 0;
+	while(1) {
         // get the current and following phoneme
-		Y = phonemeIndexOutput[X];
-		A = phonemeIndexOutput[X+1];
-		X++;
+		unsigned char phoneme = phonemeIndexOutput[pos];
+		A = phonemeIndexOutput[pos+1];
+		pos++;
 
 		// exit loop at end token
-		if (A == 255) break;//goto pos47970;
-
+		if (A == 255) break;
 
         // get the ranking of each phoneme
-		X = A;
+		pos = A;
 		mem56 = blendRank[A];
-		A = blendRank[Y];
+
+		unsigned char rank = blendRank[phoneme];
 		
 		// compare the rank - lower rank value is stronger
-		if (A == mem56)
-		{
+		if (rank == mem56) {
             // same rank, so use out blend lengths from each phoneme
-			phase1 = outBlendLength[Y];
-			phase2 = outBlendLength[X];
-		} else
-		if (A < mem56)
-		{
+			phase1 = outBlendLength[phoneme];
+			phase2 = outBlendLength[pos];
+		} else if (rank < mem56) {
             // first phoneme is stronger, so us it's blend lengths
-			phase1 = inBlendLength[X];
-			phase2 = outBlendLength[X];
-		} else
-		{
+			phase1 = inBlendLength[pos];
+			phase2 = outBlendLength[pos];
+		} else {
             // second phoneme is stronger, so use it's blend lengths
             // note the out/in are swapped
-			phase1 = outBlendLength[Y];
-			phase2 = inBlendLength[Y];
+			phase1 = outBlendLength[phoneme];
+			phase2 = inBlendLength[phoneme];
 		}
 
-		Y = mem44;
 		A = mem49 + phonemeLengthOutput[mem44]; // A is mem49 + length
 		mem49 = A; // mem49 now holds length + position
-		A = A + phase2; //Maybe Problem because of carry flag
+		A = mem49 + phase2; //Maybe Problem because of carry flag
 
 		//47776: ADC 42
-		speedcounter = A;
+		unsigned char speedcounter = A;
 		mem47 = 168;
-		phase3 = mem49 - phase1; // what is mem49
-		A = phase1 + phase2; // total transition?
-		mem38 = A;
+		unsigned char phase3 = mem49 - phase1; // what is mem49
+		unsigned char mem38 = phase1 + phase2; // total transition?
 		
-		X = A;
-		X -= 2;
-		if ((X & 128) == 0)
-		do   //while No. 2
-		{
-			//pos47810:
-
-          // mem47 is used to index the tables:
-          // 168  pitches[]
-          // 169  frequency1
-          // 170  frequency2
-          // 171  frequency3
-          // 172  amplitude1
-          // 173  amplitude2
-          // 174  amplitude3
-
-			mem40 = mem38;
-
-			if (mem47 == 168)     // pitch
-			{
+		pos = mem38;
+		pos -= 2;
+		if ((pos & 128) == 0)
+            do {
+                // mem47 is used to index the tables:
+                // 168  pitches[]
+                // 169  frequency1
+                // 170  frequency2
+                // 171  frequency3
+                // 172  amplitude1
+                // 173  amplitude2
+                // 174  amplitude3
+                
+                unsigned char mem40 = mem38;
+            
+                if (mem47 == 168) {     // pitch
+                    // unlike the other values, the pitches[] interpolates from 
+                    // the middle of the current phoneme to the middle of the 
+                    // next phoneme
                       
-               // unlike the other values, the pitches[] interpolates from 
-               // the middle of the current phoneme to the middle of the 
-               // next phoneme
-                      
-				unsigned char mem36, mem37;
-				// half the width of the current phoneme
-				mem36 = phonemeLengthOutput[mem44] >> 1;
-				// half the width of the next phoneme
-				mem37 = phonemeLengthOutput[mem44+1] >> 1;
-				// sum the values
-				mem40 = mem36 + mem37; // length of both halves
-				mem37 += mem49; // center of next phoneme
-				mem36 = mem49 - mem36; // center index of current phoneme
-				A = Read(mem47, mem37); // value at center of next phoneme - end interpolation value
-				//A = mem[address];
-				
-				Y = mem36; // start index of interpolation
-				mem53 = A - Read(mem47, mem36); // value to center of current phoneme
-			} else
-			{
-                // value to interpolate to
-				A = Read(mem47, speedcounter);
-				// position to start interpolation from
-				Y = phase3;
-				// value to interpolate from
-				mem53 = A - Read(mem47, phase3);
-			}
+                    // half the width of the current phoneme
+                    unsigned char mem36 = phonemeLengthOutput[mem44] >> 1;
+                    // half the width of the next phoneme
+                    unsigned char mem37 = phonemeLengthOutput[mem44+1] >> 1;
+                    // sum the values
+                    mem40 = mem36 + mem37; // length of both halves
+                    mem37 += mem49; // center of next phoneme
+                    mem36 = mem49 - mem36; // center index of current phoneme
+                    unsigned char A = Read(mem47, mem37); // value at center of next phoneme - end interpolation value
+                    mem53 = A - Read(mem47, mem36); // value to center of current phoneme
+                } else {
+                    // value to interpolate to
+                    unsigned char A = Read(mem47, speedcounter);
+                    // position to start interpolation from
+                    // value to interpolate from
+                    mem53 = A - Read(mem47, phase3);
+                }
 			
-			//Code47503(mem40);
-			// ML : Code47503 is division with remainder, and mem50 gets the sign
+                //Code47503(mem40);
+                // ML : Code47503 is division with remainder, and mem50 gets the sign
 			
-			// calculate change per frame
-			mem50 = (((char)(mem53) < 0) ? 128 : 0);
-			mem51 = abs((char)mem53) % mem40;
-			mem53 = (unsigned char)((char)(mem53) / mem40);
+                // calculate change per frame
+                mem50 = (((char)(mem53) < 0) ? 128 : 0);
+                mem51 = abs((char)mem53) % mem40;
+                mem53 = (unsigned char)((char)(mem53) / mem40);
 
-            // interpolation range
-			X = mem40; // number of frames to interpolate over
-			Y = phase3; // starting frame
+                // interpolation range
+                pos = mem40;  // number of frames to interpolate over
+                unsigned char frame = phase3; // starting frame
 
+                // linearly interpolate values
+                mem56 = 0;
+                while(1) {
+                    A = Read(mem47, frame) + mem53; //carry alway cleared
 
-            // linearly interpolate values
-
-			mem56 = 0;
-			//47907: CLC
-			//pos47908:
-			while(1)     //while No. 3
-			{
-				A = Read(mem47, Y) + mem53; //carry alway cleared
-
-				mem48 = A;
-				Y++;
-				X--;
-				if(X == 0) break;
-
-				mem56 += mem51;
-				if (mem56 >= mem40)  //???
-				{
-					mem56 -= mem40; //carry? is set
-					//if ((mem56 & 128)==0)
-					if ((mem50 & 128)==0)
-					{
-						//47935: BIT 50
-						//47937: BMI 47943
-						if(mem48 != 0) mem48++;
-					} else mem48--;
-				}
-				//pos47945:
-				Write(mem47, Y, mem48);
-			} //while No. 3
-
-			//pos47952:
-			mem47++;
-			//if (mem47 != 175) goto pos47810;
-		} while (mem47 != 175);     //while No. 2
-		//pos47963:
-		mem44++;
-		X = mem44;
-	}  //while No. 1
-
-	//goto pos47701;
-	//pos47970:
+                    unsigned char mem48 = A;
+                    frame++;
+                    pos--;
+                    if(pos == 0) break;
+                    
+                    mem56 += mem51;
+                    if (mem56 >= mem40) {  //???
+                        mem56 -= mem40; //carry? is set
+                         if ((mem50 & 128)==0) {
+                            if(mem48 != 0) mem48++;
+                        } else mem48--;
+                    }
+                    Write(mem47, frame, mem48);
+                } //while No. 3
+                
+                mem47++;
+            } while (mem47 != 175);     //while No. 2
+		pos = ++mem44;
+	} 
 
     // add the length of this phoneme
-	mem48 = mem49 + phonemeLengthOutput[mem44];
+    return mem49 + phonemeLengthOutput[mem44];
+}
+
+
+
+// CREATE FRAMES
+//
+// The length parameter in the list corresponds to the number of frames
+// to expand the phoneme to. Each frame represents 10 milliseconds of time.
+// So a phoneme with a length of 7 = 7 frames = 70 milliseconds duration.
+//
+// The parameters are copied from the phoneme to the frame verbatim.
+//
+static void CreateFrames()
+{
+    unsigned char mem44 = 0;
+	unsigned char phase1 = 0;
+
+	X = 0;
+    do {
+        // get the phoneme at the index
+        unsigned char phoneme = phonemeIndexOutput[mem44];
 	
+        // if terminal phoneme, exit the loop
+        if (phoneme == 255) break;
+	
+        // period phoneme *.
+        if (phoneme == 1)  AddInflection(1, phase1); // rising
+        // question mark phoneme?
+        if (phoneme == 2) AddInflection(255, phase1); // falling
+
+        // get the stress amount (more stress = higher pitch)
+        phase1 = tab47492[stressOutput[mem44] + 1];
+	
+        // get number of frames to write
+        unsigned phase2 = phonemeLengthOutput[mem44];
+	
+        // copy from the source to the frames list
+        do {
+            frequency1[X] = freq1data[phoneme];     // F1 frequency
+            frequency2[X] = freq2data[phoneme];     // F2 frequency
+            frequency3[X] = freq3data[phoneme];     // F3 frequency
+            amplitude1[X] = ampl1data[phoneme];     // F1 amplitude
+            amplitude2[X] = ampl2data[phoneme];     // F2 amplitude
+            amplitude3[X] = ampl3data[phoneme];     // F3 amplitude
+            sampledConsonantFlag[X] = sampledConsonantFlags[phoneme];        // phoneme data for sampled consonants
+            pitches[X] = pitch + phase1;      // pitch
+            X++;
+        } while(--phase2 != 0);
+        mem44++;
+    } while(mem44 != 0);
+}
+
+
+// RESCALE AMPLITUDE
+//
+// Rescale volume from a linear scale to decibels.
+//
+void RescaleAmplitude() 
+{
+    int i;
+    for(i=255; i>=0; i--)
+        {
+            amplitude1[i] = amplitudeRescale[amplitude1[i]];
+            amplitude2[i] = amplitudeRescale[amplitude2[i]];
+            amplitude3[i] = amplitudeRescale[amplitude3[i]];
+        }
+}
+
+
 
 // ASSIGN PITCH CONTOUR
 //
@@ -630,49 +572,49 @@ do
 // pitch contour. Without this, the output would be at a single
 // pitch level (monotone).
 
-	
+void AssignPitchContour()
+{	
 	// don't adjust pitch if in sing mode
-	if (!singmode)
-	{
+	if (!singmode) {
         // iterate through the buffer
-		for(i=0; i<256; i++) {
+        int i;
+        for(i=0; i<256; i++) {
             // subtract half the frequency of the formant 1.
             // this adds variety to the voice
     		pitches[i] -= (frequency1[i] >> 1);
         }
 	}
-
-	phase1 = 0;
-	phase2 = 0;
-	phase3 = 0;
-	mem49 = 0;
-	speedcounter = 72; //sam standard speed
-
-// RESCALE AMPLITUDE
-//
-// Rescale volume from a linear scale to decibels.
-//
-
-	//amplitude rescaling
-	for(i=255; i>=0; i--)
-	{
-		amplitude1[i] = amplitudeRescale[amplitude1[i]];
-		amplitude2[i] = amplitudeRescale[amplitude2[i]];
-		amplitude3[i] = amplitudeRescale[amplitude3[i]];
-	}
-
-	Y = 0;
-	A = pitches[0];
-	mem44 = A;
-	X = A;
-	mem38 = A - (A>>2);     // 3/4*A ???
-
-if (debug)
-{
-	PrintOutput(sampledConsonantFlag, frequency1, frequency2, frequency3, amplitude1, amplitude2, amplitude3, pitches);
 }
 
- ProcessFrames(mem48,phase1,phase2,phase3, speedcounter,mem38);
+
+// RENDER THE PHONEMES IN THE LIST
+//
+// The phoneme list is converted into sound through the steps:
+//
+// 1. Copy each phoneme <length> number of times into the frames list,
+//    where each frame represents 10 milliseconds of sound.
+//
+// 2. Determine the transitions lengths between phonemes, and linearly
+//    interpolate the values across the frames.
+//
+// 3. Offset the pitches by the fundamental frequency.
+//
+// 4. Render the each frame.
+void Render()
+{
+	if (phonemeIndexOutput[0] == 255) return; //exit if no data
+
+    CreateFrames();
+    unsigned char t = CreateTransitions();
+
+    AssignPitchContour();
+    RescaleAmplitude();
+
+    if (debug) {
+        PrintOutput(sampledConsonantFlag, frequency1, frequency2, frequency3, amplitude1, amplitude2, amplitude3, pitches);
+    }
+
+    ProcessFrames(t);
 }
 
 
