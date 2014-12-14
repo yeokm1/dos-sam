@@ -123,11 +123,10 @@ void Write(unsigned char p, unsigned char Y, unsigned char value)
 }
 
 
-
-unsigned char RenderVoicedSample(unsigned char hibyte, unsigned char off, unsigned char phase1)
+static unsigned char RenderVoicedSample(unsigned short hi, unsigned char off, unsigned char phase1)
 {
 	do {
-		unsigned char sample = sampleTable[hibyte*256+off];
+		unsigned char sample = sampleTable[hi+off];
 		unsigned char bit = 8;
 		do {
 			if ((sample & 128) != 0) Output(3, 26);
@@ -138,6 +137,20 @@ unsigned char RenderVoicedSample(unsigned char hibyte, unsigned char off, unsign
 	} while (++phase1 != 0);
 	return off;
 }
+
+static void RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned char mem53)
+{
+    do {
+        unsigned char bit = 8;
+        unsigned char sample = sampleTable[hi+off];
+        do {
+            if ((sample & 128) != 0) Output(2, 5);
+            else Output(1, mem53);
+            sample <<= 1;
+        } while (--bit != 0);
+    } while (++off != 0);
+}
+
 
 
 // -------------------------------------------------------------------------
@@ -195,20 +208,14 @@ unsigned char RenderVoicedSample(unsigned char hibyte, unsigned char off, unsign
 // For voices samples, samples are interleaved between voiced output.
 
 
-// Code48227()
 void RenderSample(unsigned char *mem66)
 {     
-	int tempA;
 	// current phoneme's index
 	mem49 = Y;
 
 	// mask low three bits and subtract 1 get value to 
 	// convert 0 bits on unvoiced samples.
-	A = mem39&7;
-	X = A-1;
-
-    // store the result
-	mem56 = X;
+	unsigned char mem56 = (mem39&7)-1;
 	
 	// determine which offset to use from table { 0x18, 0x1A, 0x17, 0x17, 0x17 }
 	// T, S, Z                0          0x18
@@ -217,73 +224,18 @@ void RenderSample(unsigned char *mem66)
 	// /H                     3          0x17
 	// /X                     4          0x17
 
-    // get value from the table
-	mem53 = tab48426[X];
-	mem47 = X;      //46016+mem[56]*256
+    mem44 = 1;
 	
+    unsigned short hi = mem56*256;
 	// voiced sample?
-	A = mem39 & 248;
-	if(A == 0)
-	{
+	unsigned char pitch = mem39 & 248;
+	if(pitch == 0) {
         // voiced phoneme: Z*, ZH, V*, DH
-		Y = mem49;
-		A = pitches[mem49] >> 4;
-        *mem66 = RenderVoicedSample(mem47, *mem66, A ^ 255);
-        mem44 = 1;
+		pitch = pitches[mem49] >> 4;
+        *mem66 = RenderVoicedSample(hi, *mem66, pitch ^ 255);
         return;
 	}
-	
-	Y = A ^ 255;
-pos48274:
-         
-    // step through the 8 bits in the sample
-	mem56 = 8;
-	
-	// get the next sample from the table
-    // mem47*256 = offset to start of samples
-	A = sampleTable[mem47*256+Y];
-pos48280:
-
-    // left shift to get the high bit
-	tempA = A;
-	A = A << 1;
-	//48281: BCC 48290
-	
-	// bit not set?
-	if ((tempA & 128) == 0)
-	{
-        // convert the bit to value from table
-		X = mem53;
-		//mem[54296] = X;
-        // output the byte
-		Output(1, X);
-		// if X != 0, exit loop
-		if(X != 0) goto pos48296;
-	}
-	
-	// output a 5 for the on bit
-	Output(2, 5);
-
-	//48295: NOP
-pos48296:
-
-	X = 0;
-
-    // decrement counter
-	mem56--;
-	
-	// if not done, jump to top of loop
-	if (mem56 != 0) goto pos48280;
-	
-	// increment position
-	Y++;
-	if (Y != 0) goto pos48274;
-	
-	// restore values and return
-	mem44 = 1;
-	Y = mem49;
-	return;
-
+    RenderUnvoicedSample(hi, pitch^255, tab48426[mem56]);
 }
 
 
