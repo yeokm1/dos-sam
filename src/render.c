@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -208,14 +209,14 @@ static void RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned 
 // For voices samples, samples are interleaved between voiced output.
 
 
-void RenderSample(unsigned char *mem66)
+void RenderSample(unsigned char *mem66, unsigned char consonantFlag)
 {     
 	// current phoneme's index
 	mem49 = Y;
 
 	// mask low three bits and subtract 1 get value to 
 	// convert 0 bits on unvoiced samples.
-	unsigned char hibyte = (mem39&7)-1;
+	unsigned char hibyte = (consonantFlag & 7)-1;
 	
 	// determine which offset to use from table { 0x18, 0x1A, 0x17, 0x17, 0x17 }
 	// T, S, Z                0          0x18
@@ -228,7 +229,7 @@ void RenderSample(unsigned char *mem66)
 	
     unsigned short hi = hibyte*256;
 	// voiced sample?
-	unsigned char pitch = mem39 & 248;
+	unsigned char pitch = consonantFlag & 248;
 	if(pitch == 0) {
         // voiced phoneme: Z*, ZH, V*, DH
 		pitch = pitches[mem49] >> 4;
@@ -267,7 +268,7 @@ void ProcessFrames(unsigned char mem48)
 		
 		// unvoiced sampled phoneme?
         if(mem39 & 248) {
-			RenderSample(&mem66);
+			RenderSample(&mem66, mem39);
 			// skip ahead two in the phoneme buffer
 			Y += 2;
 			mem48 -= 2;
@@ -298,7 +299,6 @@ void ProcessFrames(unsigned char mem48)
 		
 		// finished with a glottal pulse?
 		if(mem44 == 0) {
-pos48159:
             // fetch the next glottal pulse length
 			
 			mem44 = pitches[Y];
@@ -328,8 +328,17 @@ pos48159:
 		// voiced sampled phonemes interleave the sample with the
 		// glottal pulse. The sample flag is non-zero, so render
 		// the sample for the phoneme.
-		RenderSample(&mem66);
-		goto pos48159;
+		RenderSample(&mem66, mem39);
+
+        // fetch the next glottal pulse length
+        mem44 = pitches[Y];
+        mem38 = A = mem44 - (mem44>>2);
+		
+        // reset the formant wave generators to keep them in 
+        // sync with the glottal pulse
+        phase1 = 0;
+        phase2 = 0;
+        phase3 = 0;
 	} //while
 
 }
@@ -409,19 +418,16 @@ unsigned char CreateTransitions()
 			phase2 = inBlendLength[phoneme];
 		}
 
-		A = mem49 + phonemeLengthOutput[mem44]; // A is mem49 + length
-		mem49 = A; // mem49 now holds length + position
-		A = mem49 + phase2; //Maybe Problem because of carry flag
+		mem49 += phonemeLengthOutput[mem44]; 
 
-		//47776: ADC 42
-		unsigned char speedcounter = A;
-		mem47 = 168;
-		unsigned char phase3 = mem49 - phase1; // what is mem49
-		unsigned char mem38 = phase1 + phase2; // total transition?
+		unsigned char speedcounter = mem49 + phase2;
+		unsigned table = 168;
+		unsigned char phase3 = mem49 - phase1;
+		unsigned char transition = phase1 + phase2; // total transition?
 		
-		pos = mem38;
+		pos = transition;
 		pos -= 2;
-		if ((pos & 128) == 0)
+		if ((pos & 128) == 0) {
             do {
                 // mem47 is used to index the tables:
                 // 168  pitches[]
@@ -432,9 +438,9 @@ unsigned char CreateTransitions()
                 // 173  amplitude2
                 // 174  amplitude3
                 
-                unsigned char mem40 = mem38;
+                unsigned char mem40 = transition;
             
-                if (mem47 == 168) {     // pitch
+                if (table == 168) {     // pitch
                     // unlike the other values, the pitches[] interpolates from 
                     // the middle of the current phoneme to the middle of the 
                     // next phoneme
@@ -445,16 +451,10 @@ unsigned char CreateTransitions()
                     unsigned char mem37 = phonemeLengthOutput[mem44+1] >> 1;
                     // sum the values
                     mem40 = mem36 + mem37; // length of both halves
-                    mem37 += mem49; // center of next phoneme
-                    mem36 = mem49 - mem36; // center index of current phoneme
-                    unsigned char A = Read(mem47, mem37); // value at center of next phoneme - end interpolation value
-                    mem53 = A - Read(mem47, mem36); // value to center of current phoneme
+                    mem53 = Read(table, mem37 + mem49) - Read(table, mem49-mem36);
                 } else {
-                    // value to interpolate to
-                    unsigned char A = Read(mem47, speedcounter);
-                    // position to start interpolation from
-                    // value to interpolate from
-                    mem53 = A - Read(mem47, phase3);
+                    // Interpolate <from> - <to>
+                    mem53 = Read(table, speedcounter) - Read(table, phase3);
                 }
 			
                 //Code47503(mem40);
@@ -472,9 +472,7 @@ unsigned char CreateTransitions()
                 // linearly interpolate values
                 mem56 = 0;
                 while(1) {
-                    A = Read(mem47, frame) + mem53; //carry alway cleared
-
-                    unsigned char mem48 = A;
+                    unsigned char mem48 = Read(table, frame) + mem53; //carry alway cleared
                     frame++;
                     pos--;
                     if(pos == 0) break;
@@ -486,11 +484,12 @@ unsigned char CreateTransitions()
                             if(mem48 != 0) mem48++;
                         } else mem48--;
                     }
-                    Write(mem47, frame, mem48);
+                    Write(table, frame, mem48);
                 } //while No. 3
                 
-                mem47++;
-            } while (mem47 != 175);     //while No. 2
+                table++;
+            } while (table != 175);     //while No. 2
+        }
 		pos = ++mem44;
 	} 
 
@@ -630,14 +629,8 @@ void AddInflection(unsigned char mem48, unsigned char phase1)
            
     // store the location of the punctuation
 	mem49 = X;
-	A = X;
-	int Atemp = A;
-	
-	// backup 30 frames
-	A = A - 30; 
-	// if index is before buffer, point to start of buffer
-	if (Atemp <= 30) A=0;
-	X = A;
+    if (X < 30) X = 0;
+    else X-= 30;
 
 	// FIXME: Explain this fix better, it's not obvious
 	// ML : A =, fixes a problem with invalid pitch with '.'
