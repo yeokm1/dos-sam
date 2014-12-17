@@ -612,48 +612,9 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 }
 
 
-//return = (mem39212*mem39213) >> 1
 unsigned char trans(unsigned char mem39212, unsigned char mem39213)
 {
-	//pos39008:
-	unsigned char carry;
-	int temp;
-	unsigned char mem39214, mem39215;
-	A = 0;
-	mem39215 = 0;
-	mem39214 = 0;
-	X = 8;
-	do
-	{
-		carry = mem39212 & 1;
-		mem39212 = mem39212 >> 1;
-		if (carry != 0)
-		{
-			/*
-						39018: LSR 39212
-						39021: BCC 39033
-						*/
-			carry = 0;
-			A = mem39215;
-			temp = (int)A + (int)mem39213;
-			A = A + mem39213;
-			if (temp > 255) carry = 1;
-			mem39215 = A;
-		}
-		temp = mem39215 & 1;
-		mem39215 = (mem39215 >> 1) | (carry?128:0);
-		carry = temp;
-		//39033: ROR 39215
-		X--;
-	} while (X != 0);
-	temp = mem39214 & 128;
-	mem39214 = (mem39214 << 1) | (carry?1:0);
-	carry = temp;
-	temp = mem39215 & 128;
-	mem39215 = (mem39215 << 1) | (carry?1:0);
-	carry = temp;
-
-	return mem39215;
+    return (mem39212 * mem39213) >> 7 & 0xfe;
 }
 
 
