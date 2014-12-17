@@ -1,9 +1,6 @@
 
 #include "render.h"
 
-extern unsigned char mem39;
-extern unsigned char Y;
-extern unsigned char mem44;
 extern unsigned char speed;
 
 // From RenderTabs.h
@@ -23,6 +20,19 @@ extern unsigned char frequency3[256];
 
 extern void Output(int index, unsigned char A);
 
+static void CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, unsigned char phase3, unsigned char Y)
+{
+    unsigned int tmp;
+
+    tmp   = multtable[sinus[phase1]     | amplitude1[Y]];
+    tmp  += multtable[sinus[phase2]     | amplitude2[Y]];
+    tmp  += tmp > 255 ? 1 : 0; // if addition above overflows, we for some reason add one;
+    tmp  += multtable[rectangle[phase3] | amplitude3[Y]];
+    tmp  += 136;
+    tmp >>= 4; // Scale down to 0..15 range of C64 audio.
+            
+    Output(0, tmp & 0xf);
+}
 
 // PROCESS THE FRAMES
 //
@@ -42,32 +52,24 @@ void ProcessFrames(unsigned char mem48)
 	unsigned char phase3 = 0;
     unsigned char mem66;
     
-    Y = 0;
-    mem44 = pitches[0];
+    unsigned char Y = 0;
 
-    unsigned char mem38 = mem44 - (mem44 >> 2);
+    unsigned char glottal_pulse = pitches[0];
+    unsigned char mem38 = glottal_pulse - (glottal_pulse >> 2); // mem44 * 0.75
 
-	while(1) {
-		mem39 = sampledConsonantFlag[Y];
+	while(mem48) {
+		unsigned char flags = sampledConsonantFlag[Y];
 		
 		// unvoiced sampled phoneme?
-        if(mem39 & 248) {
-			RenderSample(&mem66, mem39);
+        if(flags & 248) {
+			RenderSample(&mem66, flags,Y);
 			// skip ahead two in the phoneme buffer
 			Y += 2;
 			mem48 -= 2;
-            if(mem48 == 0) 	return;
             speedcounter = speed;
 		} else {
-            // simulate the glottal pulse and formants
-			unsigned char mem56 = multtable[sinus[phase1] | amplitude1[Y]];
-			unsigned char carry = ((mem56+multtable[sinus[phase2] | amplitude2[Y]] ) > 255);
-			mem56 += multtable[sinus[phase2] | amplitude2[Y]];
-			unsigned char tmp = mem56 + multtable[rectangle[phase3] | amplitude3[Y]] + (carry?1:0);
-			tmp = ((tmp + 136) & 255) >> 4; //there must be also a carry
-			
-			// output the accumulated value
-			Output(0, tmp);
+            CombineGlottalAndFormants(phase1, phase2, phase3, Y);
+
 			speedcounter--;
 			if (speedcounter == 0) { 
                 Y++; //go to next amplitude
@@ -76,34 +78,32 @@ void ProcessFrames(unsigned char mem48)
                 if(mem48 == 0) 	return;
                 speedcounter = speed;
             }
-		}
          
-        // decrement the remaining length of the glottal pulse
-		mem44--;
+            --glottal_pulse;
 		
-		// finished with a glottal pulse?
-		if(mem44 != 0) {
-            // decrement the count
-            mem38--;
-            
-            // is the count non-zero and the sampled flag is zero?
-            if((mem38 != 0) || (mem39 == 0)) {
-                // reset the phase of the formants to match the pulse
-                phase1 += frequency1[Y];
-                phase2 += frequency2[Y];
-                phase3 += frequency3[Y];
-                continue;
+            if(glottal_pulse != 0) {
+                // not finished with a glottal pulse
+
+                --mem38;
+                // within the first 75% of the glottal pulse?
+                // is the count non-zero and the sampled flag is zero?
+                if((mem38 != 0) || (flags == 0)) {
+                    // reset the phase of the formants to match the pulse
+                    phase1 += frequency1[Y];
+                    phase2 += frequency2[Y];
+                    phase3 += frequency3[Y];
+                    continue;
+                }
+                
+                // voiced sampled phonemes interleave the sample with the
+                // glottal pulse. The sample flag is non-zero, so render
+                // the sample for the phoneme.
+                RenderSample(&mem66, flags,Y);
             }
-		
-            // voiced sampled phonemes interleave the sample with the
-            // glottal pulse. The sample flag is non-zero, so render
-            // the sample for the phoneme.
-            RenderSample(&mem66, mem39);
         }
 
-        // fetch the next glottal pulse length
-        mem44 = pitches[Y];
-        mem38 = mem44 - (mem44>>2); // mem44 * 0.75
+        glottal_pulse = pitches[Y];
+        mem38 = glottal_pulse - (glottal_pulse>>2); // mem44 * 0.75
 
         // reset the formant wave generators to keep them in 
         // sync with the glottal pulse

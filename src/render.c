@@ -12,8 +12,8 @@ extern int debug;
 unsigned char wait1 = 7;
 unsigned char wait2 = 6;
 
-extern unsigned char A, X, Y;
-extern unsigned char mem44;
+//extern unsigned char A, X, Y;
+//extern unsigned char mem44;
 
 extern unsigned char speed;
 extern unsigned char pitch;
@@ -208,10 +208,9 @@ static void RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned 
 // For voices samples, samples are interleaved between voiced output.
 
 
-void RenderSample(unsigned char *mem66, unsigned char consonantFlag)
+void RenderSample(unsigned char *mem66, unsigned char consonantFlag, unsigned char mem49)
 {     
-	// current phoneme's index
-	unsigned char mem49 = Y;
+	// mem49 == current phoneme's index
 
 	// mask low three bits and subtract 1 get value to 
 	// convert 0 bits on unvoiced samples.
@@ -224,8 +223,6 @@ void RenderSample(unsigned char *mem66, unsigned char consonantFlag)
 	// /H                     3          0x17
 	// /X                     4          0x17
 
-    mem44 = 1;
-	
     unsigned short hi = hibyte*256;
 	// voiced sample?
 	unsigned char pitch = consonantFlag & 248;
