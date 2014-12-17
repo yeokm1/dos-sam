@@ -14,13 +14,8 @@ unsigned char wait2 = 6;
 
 extern unsigned char A, X, Y;
 extern unsigned char mem44;
-extern unsigned char mem47;
 extern unsigned char mem49;
-extern unsigned char mem39;
-extern unsigned char mem50;
-extern unsigned char mem51;
 extern unsigned char mem53;
-
 extern unsigned char mem56;
 
 extern unsigned char speed;
@@ -240,107 +235,9 @@ void RenderSample(unsigned char *mem66, unsigned char consonantFlag)
 }
 
 
-// PROCESS THE FRAMES
-//
-// In traditional vocal synthesis, the glottal pulse drives filters, which
-// are attenuated to the frequencies of the formants.
-//
-// SAM generates these formants directly with sin and rectangular waves.
-// To simulate them being driven by the glottal pulse, the waveforms are
-// reset at the beginning of each glottal pulse.
-//
-void ProcessFrames(unsigned char mem48)
+
+void Interpolate()
 {
-
-    unsigned char speedcounter = 72;
-	unsigned char phase1 = 0;
-    unsigned char phase2 = 0;
-	unsigned char phase3 = 0;
-    unsigned char mem66;
-    
-    Y = 0;
-    mem44 = pitches[0];
-
-    unsigned char mem38 = mem44 - (mem44 >> 2);
-
-	while(1) {
-		mem39 = sampledConsonantFlag[Y];
-		
-		// unvoiced sampled phoneme?
-        if(mem39 & 248) {
-			RenderSample(&mem66, mem39);
-			// skip ahead two in the phoneme buffer
-			Y += 2;
-			mem48 -= 2;
-            if(mem48 == 0) 	return;
-            speedcounter = speed;
-		} else {
-            // simulate the glottal pulse and formants
-			unsigned char mem56 = multtable[sinus[phase1] | amplitude1[Y]];
-			unsigned char carry = ((mem56+multtable[sinus[phase2] | amplitude2[Y]] ) > 255);
-			mem56 += multtable[sinus[phase2] | amplitude2[Y]];
-			unsigned char A = mem56 + multtable[rectangle[phase3] | amplitude3[Y]] + (carry?1:0);
-			A = ((A + 136) & 255) >> 4; //there must be also a carry
-			
-			// output the accumulated value
-			Output(0, A);
-			speedcounter--;
-			if (speedcounter == 0) { 
-                Y++; //go to next amplitude
-                // decrement the frame count
-                mem48--;
-                if(mem48 == 0) 	return;
-                speedcounter = speed;
-            }
-		}
-         
-        // decrement the remaining length of the glottal pulse
-		mem44--;
-		
-		// finished with a glottal pulse?
-		if(mem44 == 0) {
-            // fetch the next glottal pulse length
-			
-			mem44 = pitches[Y];
-			mem38 = A = mem44 - (mem44>>2);
-			
-			// reset the formant wave generators to keep them in 
-			// sync with the glottal pulse
-			phase1 = 0;
-			phase2 = 0;
-			phase3 = 0;
-			continue;
-		}
-		
-		// decrement the count
-		mem38--;
-		
-		// is the count non-zero and the sampled flag is zero?
-		if((mem38 != 0) || (mem39 == 0))
-		{
-            // reset the phase of the formants to match the pulse
-			phase1 += frequency1[Y];
-			phase2 += frequency2[Y];
-			phase3 += frequency3[Y];
-			continue;
-		}
-		
-		// voiced sampled phonemes interleave the sample with the
-		// glottal pulse. The sample flag is non-zero, so render
-		// the sample for the phoneme.
-		RenderSample(&mem66, mem39);
-
-        // fetch the next glottal pulse length
-        mem44 = pitches[Y];
-        mem38 = A = mem44 - (mem44>>2);
-		
-        // reset the formant wave generators to keep them in 
-        // sync with the glottal pulse
-        phase1 = 0;
-        phase2 = 0;
-        phase3 = 0;
-	} //while
-
 }
 
 
@@ -383,14 +280,13 @@ unsigned char CreateTransitions()
 {
     unsigned char phase1;
     unsigned char phase2;
-	unsigned char A = 0;
 	mem44 = 0;
 	mem49 = 0; 
 	unsigned char pos = 0;
 	while(1) {
         // get the current and following phoneme
 		unsigned char phoneme = phonemeIndexOutput[pos];
-		A = phonemeIndexOutput[pos+1];
+		unsigned char A = phonemeIndexOutput[pos+1];
 		pos++;
 
 		// exit loop at end token
@@ -461,8 +357,8 @@ unsigned char CreateTransitions()
                 // ML : Code47503 is division with remainder, and mem50 gets the sign
 			
                 // calculate change per frame
-                mem50 = (((char)(mem53) < 0) ? 128 : 0);
-                mem51 = abs((char)mem53) % mem40;
+                unsigned char sign = ((char)(mem53) < 0);
+                unsigned char mem51 = abs((char)mem53) % mem40;
                 mem53 = (unsigned char)((char)(mem53) / mem40);
 
                 // interpolation range
@@ -470,7 +366,7 @@ unsigned char CreateTransitions()
                 unsigned char frame = phase3; // starting frame
 
                 // linearly interpolate values
-                mem56 = 0;
+                unsigned char mem56 = 0;
                 while(1) {
                     unsigned char mem48 = Read(table, frame) + mem53; //carry alway cleared
                     frame++;
@@ -480,12 +376,13 @@ unsigned char CreateTransitions()
                     mem56 += mem51;
                     if (mem56 >= mem40) {  //???
                         mem56 -= mem40; //carry? is set
-                         if ((mem50 & 128)==0) {
+                         if (!sign) {
                             if(mem48 != 0) mem48++;
                         } else mem48--;
                     }
                     Write(table, frame, mem48);
                 } //while No. 3
+
                 
                 table++;
             } while (table != 175);     //while No. 2
@@ -520,10 +417,8 @@ static void CreateFrames()
         // if terminal phoneme, exit the loop
         if (phoneme == 255) break;
 	
-        // period phoneme *.
-        if (phoneme == 1)  AddInflection(1, phase1); // rising
-        // question mark phoneme?
-        if (phoneme == 2) AddInflection(255, phase1); // falling
+        if (phoneme == PHONEME_PERIOD)   AddInflection(RISING_INFLECTION, phase1);
+        if (phoneme == PHONEME_QUESTION) AddInflection(FALLING_INFLECTION, phase1);
 
         // get the stress amount (more stress = higher pitch)
         phase1 = tab47492[stressOutput[mem44] + 1];
@@ -573,16 +468,12 @@ void RescaleAmplitude()
 
 void AssignPitchContour()
 {	
-	// don't adjust pitch if in sing mode
-	if (!singmode) {
-        // iterate through the buffer
-        int i;
-        for(i=0; i<256; i++) {
-            // subtract half the frequency of the formant 1.
-            // this adds variety to the voice
-    		pitches[i] -= (frequency1[i] >> 1);
-        }
-	}
+    int i;
+    for(i=0; i<256; i++) {
+        // subtract half the frequency of the formant 1.
+        // this adds variety to the voice
+        pitches[i] -= (frequency1[i] >> 1);
+    }
 }
 
 
@@ -606,7 +497,7 @@ void Render()
     CreateFrames();
     unsigned char t = CreateTransitions();
 
-    AssignPitchContour();
+    if (!singmode) AssignPitchContour();
     RescaleAmplitude();
 
     if (debug) {
@@ -623,10 +514,6 @@ void Render()
 
 void AddInflection(unsigned char mem48, unsigned char phase1)
 {
-	//pos48372:
-	//	mem48 = 255;
-//pos48376:
-           
     // store the location of the punctuation
 	mem49 = X;
     if (X < 30) X = 0;
