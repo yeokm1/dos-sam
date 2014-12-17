@@ -1,4 +1,4 @@
-OBJS = reciter.o sam.o render.o main.o debug.o processframes.o
+OBJS = reciter.o sam.o render.o main.o debug.o processframes.o createtransitions.o
 
 CC = gcc
 
@@ -21,4 +21,3 @@ package:
 
 clean:
 	rm *.o
-

@@ -14,9 +14,6 @@ unsigned char wait2 = 6;
 
 extern unsigned char A, X, Y;
 extern unsigned char mem44;
-extern unsigned char mem49;
-extern unsigned char mem53;
-extern unsigned char mem56;
 
 extern unsigned char speed;
 extern unsigned char pitch;
@@ -40,8 +37,15 @@ unsigned char amplitude3[256];
 unsigned char sampledConsonantFlag[256]; // tab44800
 
 
-void AddInflection(unsigned char mem48, unsigned char phase1);
-unsigned char trans(unsigned char mem39212, unsigned char mem39213);
+void AddInflection(unsigned char mem48, unsigned char phase1, unsigned char X);
+
+//return = hibyte(mem39212*mem39213) <<  1
+unsigned char trans(unsigned char a, unsigned char b)
+{
+    return ((a * b) >> 8) << 1;
+}
+
+
 
 
 // contains the final soundbuffer
@@ -207,7 +211,7 @@ static void RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned 
 void RenderSample(unsigned char *mem66, unsigned char consonantFlag)
 {     
 	// current phoneme's index
-	mem49 = Y;
+	unsigned char mem49 = Y;
 
 	// mask low three bits and subtract 1 get value to 
 	// convert 0 bits on unvoiced samples.
@@ -236,166 +240,6 @@ void RenderSample(unsigned char *mem66, unsigned char consonantFlag)
 
 
 
-void Interpolate()
-{
-}
-
-
-
-// CREATE TRANSITIONS
-//
-// Linear transitions are now created to smoothly connect each
-// phoeneme. This transition is spread between the ending frames
-// of the old phoneme (outBlendLength), and the beginning frames 
-// of the new phoneme (inBlendLength).
-//
-// To determine how many frames to use, the two phonemes are 
-// compared using the blendRank[] table. The phoneme with the 
-// smaller score is used. In case of a tie, a blend of each is used:
-//
-//      if blendRank[phoneme1] ==  blendRank[phomneme2]
-//          // use lengths from each phoneme
-//          outBlendFrames = outBlend[phoneme1]
-//          inBlendFrames = outBlend[phoneme2]
-//      else if blendRank[phoneme1] < blendRank[phoneme2]
-//          // use lengths from first phoneme
-//          outBlendFrames = outBlendLength[phoneme1]
-//          inBlendFrames = inBlendLength[phoneme1]
-//      else
-//          // use lengths from the second phoneme
-//          // note that in and out are swapped around!
-//          outBlendFrames = inBlendLength[phoneme2]
-//          inBlendFrames = outBlendLength[phoneme2]
-//
-//  Blend lengths can't be less than zero.
-//
-// For most of the parameters, SAM interpolates over the range of the last
-// outBlendFrames-1 and the first inBlendFrames.
-//
-// The exception to this is the Pitch[] parameter, which is interpolates the
-// pitch from the center of the current phoneme to the center of the next
-// phoneme.
-
-unsigned char CreateTransitions()
-{
-    unsigned char phase1;
-    unsigned char phase2;
-	mem44 = 0;
-	mem49 = 0; 
-	unsigned char pos = 0;
-	while(1) {
-        // get the current and following phoneme
-		unsigned char phoneme = phonemeIndexOutput[pos];
-		unsigned char A = phonemeIndexOutput[pos+1];
-		pos++;
-
-		// exit loop at end token
-		if (A == 255) break;
-
-        // get the ranking of each phoneme
-		pos = A;
-		mem56 = blendRank[A];
-
-		unsigned char rank = blendRank[phoneme];
-		
-		// compare the rank - lower rank value is stronger
-		if (rank == mem56) {
-            // same rank, so use out blend lengths from each phoneme
-			phase1 = outBlendLength[phoneme];
-			phase2 = outBlendLength[pos];
-		} else if (rank < mem56) {
-            // first phoneme is stronger, so us it's blend lengths
-			phase1 = inBlendLength[pos];
-			phase2 = outBlendLength[pos];
-		} else {
-            // second phoneme is stronger, so use it's blend lengths
-            // note the out/in are swapped
-			phase1 = outBlendLength[phoneme];
-			phase2 = inBlendLength[phoneme];
-		}
-
-		mem49 += phonemeLengthOutput[mem44]; 
-
-		unsigned char speedcounter = mem49 + phase2;
-		unsigned table = 168;
-		unsigned char phase3 = mem49 - phase1;
-		unsigned char transition = phase1 + phase2; // total transition?
-		
-		pos = transition;
-		pos -= 2;
-		if ((pos & 128) == 0) {
-            do {
-                // mem47 is used to index the tables:
-                // 168  pitches[]
-                // 169  frequency1
-                // 170  frequency2
-                // 171  frequency3
-                // 172  amplitude1
-                // 173  amplitude2
-                // 174  amplitude3
-                
-                unsigned char mem40 = transition;
-            
-                if (table == 168) {     // pitch
-                    // unlike the other values, the pitches[] interpolates from 
-                    // the middle of the current phoneme to the middle of the 
-                    // next phoneme
-                      
-                    // half the width of the current phoneme
-                    unsigned char mem36 = phonemeLengthOutput[mem44] >> 1;
-                    // half the width of the next phoneme
-                    unsigned char mem37 = phonemeLengthOutput[mem44+1] >> 1;
-                    // sum the values
-                    mem40 = mem36 + mem37; // length of both halves
-                    mem53 = Read(table, mem37 + mem49) - Read(table, mem49-mem36);
-                } else {
-                    // Interpolate <from> - <to>
-                    mem53 = Read(table, speedcounter) - Read(table, phase3);
-                }
-			
-                //Code47503(mem40);
-                // ML : Code47503 is division with remainder, and mem50 gets the sign
-			
-                // calculate change per frame
-                unsigned char sign = ((char)(mem53) < 0);
-                unsigned char mem51 = abs((char)mem53) % mem40;
-                mem53 = (unsigned char)((char)(mem53) / mem40);
-
-                // interpolation range
-                pos = mem40;  // number of frames to interpolate over
-                unsigned char frame = phase3; // starting frame
-
-                // linearly interpolate values
-                unsigned char mem56 = 0;
-                while(1) {
-                    unsigned char mem48 = Read(table, frame) + mem53; //carry alway cleared
-                    frame++;
-                    pos--;
-                    if(pos == 0) break;
-                    
-                    mem56 += mem51;
-                    if (mem56 >= mem40) {  //???
-                        mem56 -= mem40; //carry? is set
-                         if (!sign) {
-                            if(mem48 != 0) mem48++;
-                        } else mem48--;
-                    }
-                    Write(table, frame, mem48);
-                } //while No. 3
-
-                
-                table++;
-            } while (table != 175);     //while No. 2
-        }
-		pos = ++mem44;
-	} 
-
-    // add the length of this phoneme
-    return mem49 + phonemeLengthOutput[mem44];
-}
-
-
-
 // CREATE FRAMES
 //
 // The length parameter in the list corresponds to the number of frames
@@ -406,25 +250,25 @@ unsigned char CreateTransitions()
 //
 static void CreateFrames()
 {
-    unsigned char mem44 = 0;
 	unsigned char phase1 = 0;
 
-	X = 0;
-    do {
+	unsigned char X = 0;
+    unsigned int i = 0;
+    while(i < 256) {
         // get the phoneme at the index
-        unsigned char phoneme = phonemeIndexOutput[mem44];
+        unsigned char phoneme = phonemeIndexOutput[i];
 	
         // if terminal phoneme, exit the loop
         if (phoneme == 255) break;
 	
-        if (phoneme == PHONEME_PERIOD)   AddInflection(RISING_INFLECTION, phase1);
-        if (phoneme == PHONEME_QUESTION) AddInflection(FALLING_INFLECTION, phase1);
+        if (phoneme == PHONEME_PERIOD)   AddInflection(RISING_INFLECTION, phase1,X);
+        else if (phoneme == PHONEME_QUESTION) AddInflection(FALLING_INFLECTION, phase1,X);
 
         // get the stress amount (more stress = higher pitch)
-        phase1 = tab47492[stressOutput[mem44] + 1];
+        phase1 = tab47492[stressOutput[i] + 1];
 	
         // get number of frames to write
-        unsigned phase2 = phonemeLengthOutput[mem44];
+        unsigned phase2 = phonemeLengthOutput[i];
 	
         // copy from the source to the frames list
         do {
@@ -436,10 +280,11 @@ static void CreateFrames()
             amplitude3[X] = ampl3data[phoneme];     // F3 amplitude
             sampledConsonantFlag[X] = sampledConsonantFlags[phoneme];        // phoneme data for sampled consonants
             pitches[X] = pitch + phase1;      // pitch
-            X++;
+            ++X;
         } while(--phase2 != 0);
-        mem44++;
-    } while(mem44 != 0);
+        
+        ++i;
+    }
 }
 
 
@@ -512,34 +357,27 @@ void Render()
 // index X. A rising inflection is used for questions, and 
 // a falling inflection is used for statements.
 
-void AddInflection(unsigned char mem48, unsigned char phase1)
+void AddInflection(unsigned char inflection, unsigned char phase1, unsigned char pos)
 {
+    unsigned char A;
     // store the location of the punctuation
-	mem49 = X;
-    if (X < 30) X = 0;
-    else X-= 30;
+	unsigned char end = pos;
+
+    if (pos < 30) pos = 0;
+    else pos -= 30;
 
 	// FIXME: Explain this fix better, it's not obvious
 	// ML : A =, fixes a problem with invalid pitch with '.'
-	while( (A=pitches[X]) == 127) X++;
+	while( (A = pitches[pos]) == 127) ++pos;
 
-    while (1)
-    {
+    while (pos != end) {
         // add the inflection direction
-        A += mem48;
-        phase1 = A;
+        A += inflection;
 	
         // set the inflection
-        pitches[X] = A;
+        pitches[pos] = A;
 
-        do {
-            // increment the position
-            X++;
-        
-            // exit if the punctuation has been reached
-            if (X == mem49) return;
-        } while (pitches[X] == 255);
-        A = phase1;
+        while ((++pos != end) && pitches[pos] == 255);
     } 
 }
 
@@ -552,8 +390,6 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 {
 	unsigned char initialFrequency;
 	unsigned char newFrequency = 0;
-	//unsigned char mouth; //mem38880
-	//unsigned char throat; //mem38881
 
 	// mouth formants (F1) 5..29
 	unsigned char mouthFormants5_29[30] = {
@@ -565,7 +401,8 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 	unsigned char throatFormants5_29[30] = {
 	255, 255,
 	255, 255, 255, 84, 73, 67, 63, 40, 44, 31, 37, 45, 73, 49,
-	36, 30, 51, 37, 29, 69, 24, 50, 30, 24, 83, 46, 54, 86};
+	36, 30, 51, 37, 29, 69, 24, 50, 30, 24, 83, 46, 54, 86,
+    };
 
 	// there must be no zeros in this 2 tables
 	// formant 1 frequencies (mouth) 48..53
@@ -574,10 +411,10 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 	// formant 2 frequencies (throat) 48..53
 	unsigned char throatFormants48_53[6] = {72, 39, 31, 43, 30, 34};
 
-	unsigned char pos = 5; //mem39216
-//pos38942:
+	unsigned char pos = 5;
+
 	// recalculate formant frequencies 5..29 for the mouth (F1) and throat (F2)
-	while(pos != 30)
+	while(pos < 30)
 	{
 		// recalculate mouth frequency
 		initialFrequency = mouthFormants5_29[pos];
@@ -591,30 +428,19 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 		pos++;
 	}
 
-//pos39059:
 	// recalculate formant frequencies 48..53
 	pos = 48;
-	Y = 0;
-    while(pos != 54)
-    {
+    while(pos < 54) {
 		// recalculate F1 (mouth formant)
-		initialFrequency = mouthFormants48_53[Y];
+		initialFrequency = mouthFormants48_53[pos-48];
 		newFrequency = trans(mouth, initialFrequency);
 		freq1data[pos] = newFrequency;
            
 		// recalculate F2 (throat formant)
-		initialFrequency = throatFormants48_53[Y];
+		initialFrequency = throatFormants48_53[pos-48];
 		newFrequency = trans(throat, initialFrequency);
 		freq2data[pos] = newFrequency;
-		Y++;
 		pos++;
 	}
 }
-
-
-unsigned char trans(unsigned char mem39212, unsigned char mem39213)
-{
-    return (mem39212 * mem39213) >> 7 & 0xfe;
-}
-
 
