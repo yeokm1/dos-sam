@@ -230,126 +230,88 @@ pos36700:
 		mem60 = X;
 	}
 
-// the string in the bracket is correct
 
-//pos36787:
+    // the string in the bracket is correct
+
 	A = mem61;
 	mem59 = mem61;
 
-pos36791:
-	while(1)
-	{
-		mem66--;
-		Y = mem66;
-		A = GetRuleByte(mem62, Y);
-		mem57 = A;
-		//36800: BPL 36805
-		if ((A & 128) != 0) goto pos37180;
-		X = A & 127;
-		A = tab36376[X] & 128;
-		if (A == 0) break;
-		X = mem59-1;
-		A = inputtemp[X];
-		if (A != mem57) goto pos36700;
-		mem59 = X;
-	}
+    while(1) {
+        while(1) {
+            mem66--;
+            Y = mem66;
+            A = GetRuleByte(mem62, Y);
+            mem57 = A;
+            if ((A & 128) != 0) goto pos37180;
+            X = A & 127;
+            A = tab36376[X] & 128;
+            if (A == 0) break;
+            X = mem59-1;
+            A = inputtemp[X];
+            if (A != mem57) goto pos36700;
+            mem59 = X;
+        }
 
-//pos36833:
-	A = mem57;
-	if (A == ' ') goto pos36895;
-	if (A == '#') goto pos36910;
-	if (A == '.') goto pos36920;
-	if (A == '&') goto pos36935;
-	if (A == '@') goto pos36967;
-	if (A == '^') goto pos37004;
-	if (A == '+') goto pos37019;
-	if (A == ':') goto pos37040;
-	//	Code42041();    //Error
-	//36894: BRK
-	return 0;
-	// --------------
-
-pos36895:
-	A = Code37055(mem59) & 128;
-	if(A != 0) goto pos36700;
-pos36905:
-	mem59 = X;
-	goto pos36791;
-
-	// --------------
-
-pos36910:
-	A = Code37055(mem59) & 64;
-	if(A != 0) goto pos36905;
-	goto pos36700;
-
-	// --------------
-
-pos36920:
-	A = Code37055(mem59) & 8;
-	if(A == 0) goto pos36700;
-    --mem59;
-    goto pos36791;
-
-pos36930:
-	mem59 = X;
-	goto pos36791;
-
-	// --------------
-
-pos36935:
-	A = Code37055(mem59) & 16;
-	if(A != 0) goto pos36930;
-	A = inputtemp[X];
-	if (A != 72) goto pos36700;
-	X--;
-	A = inputtemp[X];
-	if ((A == 67) || (A == 83)) goto pos36930;
-	goto pos36700;
-
-	// --------------
-
-pos36967:
-	A = Code37055(mem59) & 4;
-	if(A != 0) goto pos36930;
-	A = inputtemp[X];
-	if (A != 72) goto pos36700;
-	if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
-	mem59 = X;
-	goto pos36791;
-
-	// --------------
-
-pos37004:
-	A = Code37055(mem59) & 32;
-	if(A == 0) goto pos36700;
-	mem59 = X;
-	goto pos36791;
-
-pos37014:
-	mem59 = X;
-	goto pos36791;
-
-	// --------------
-
-pos37019:
-	X = mem59;
-	X--;
-	A = inputtemp[X];
-	if ((A == 'E') || (A == 'I') || (A == 'Y')) {
-        mem59 = X;
-        goto pos36791;
-    }
-
-	goto pos36700;
-	// --------------
-
-pos37040:
-    while (1) {
-        A = Code37055(mem59) & 32;
-        if(A == 0) goto pos36791;
+        unsigned char ch = mem57;
+        switch(ch) {
+        case ' ':
+            A = Code37055(mem59) & 128;
+            if(A != 0) goto pos36700;
+            break;
+            
+        case '#':
+            A = Code37055(mem59) & 64;
+            if(A == 0) goto pos36700;
+            break;
+            
+        case '.':
+            A = Code37055(mem59) & 8;
+            if(A == 0) goto pos36700;
+            break;
+            
+        case '&':
+            A = Code37055(mem59) & 16;
+            if(A == 0) {
+                A = inputtemp[X];
+                if (A != 72) goto pos36700;
+                X--;
+                A = inputtemp[X];
+                if ((A != 67) && (A != 83)) goto pos36700;
+            }
+            break;
+            
+        case '@':
+            A = Code37055(mem59) & 4;
+            if(A == 0) { 
+                A = inputtemp[X];
+                if (A != 72) goto pos36700;
+                if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
+            }
+            break;
+            
+        case '^':
+            A = Code37055(mem59) & 32;
+            if(A == 0) goto pos36700;
+            break;
+            
+        case '+':
+            X = mem59;
+            X--;
+            A = inputtemp[X];
+            if ((A != 'E') && (A != 'I') && (A && 'Y')) goto pos36700;
+            break;
+            
+        case ':':
+            while ((A = (Code37055(mem59) & 32))) --mem59;
+            continue;
+            
+        default:
+            return 0;
+        }
+        
         mem59 = X;
     }
+
 
 //---------------------------------------
 
