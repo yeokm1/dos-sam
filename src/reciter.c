@@ -416,8 +416,25 @@ pos37184:
         goto pos37184;
     }
 
-	if (A == '^') goto pos37404;
-	if (A == '+') goto pos37419;
+	if (A == '^') {
+        Code37066(mem58);
+        A = A & 32;
+        if(A != 0) {
+            mem58 = X;
+            goto pos37184;
+        }
+        goto pos36700;
+    }
+
+	if (A == '+') {
+        X = mem58 + 1;
+        A = inputtemp[X];
+        if ((A == 69) || (A == 73) || (A == 89)) {
+            mem58 = X;
+            goto pos37184;
+        }
+        goto pos36700;
+    }
 
 	if (A == ':') {
         while (1) {
@@ -430,24 +447,6 @@ pos37184:
 
 	if (A == 37) goto pos37077;   // '%'
 	return 0;
-
-pos37404:
-	Code37066(mem58);
-	A = A & 32;
-	if(A != 0) {
-        mem58 = X;
-        goto pos37184;
-    }
-    goto pos36700;
-
-pos37419:
-	X = mem58 + 1;
-	A = inputtemp[X];
-	if ((A == 69) || (A == 73) || (A == 89)) {
-        mem58 = X;
-        goto pos37184;
-    }
-	goto pos36700;
 
 pos37455:
 	Y = mem64;
