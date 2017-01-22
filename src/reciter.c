@@ -433,6 +433,8 @@ pos37320:
 	Code37066(mem58);
 	A = A & 8;
 	if(A == 0) goto pos36700;
+	mem58 = X;
+	goto pos37184;
 
 pos37330:
 	mem58 = X;
@@ -443,7 +445,10 @@ pos37330:
 pos37335:
 	Code37066(mem58);
 	A = A & 16;
-	if(A != 0) goto pos37330;
+	if(A != 0) {
+        mem58 = X;
+        goto pos37184;
+    }
 	A = inputtemp[X];
 	if (A != 72) goto pos36700;
 	X++;
