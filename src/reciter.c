@@ -78,15 +78,14 @@ pos36554:
     while (1) {
         while(1) {
             X = ++mem61;
-            A = inputtemp[X];
-            mem64 = A;
-            if (A == '[') {
+            mem64 = inputtemp[X];
+            if (mem64 == '[') {
                 X = ++mem56;
                 input[X] = 155;
                 return 1;
             }
             
-            if (A != '.') break;
+            if (mem64 != '.') break;
             X++;
             A = tab36376[inputtemp[X]] & 1;
             if(A != 0) break;
@@ -234,7 +233,7 @@ pos37184:
         while (1) {
             while (1) {
                 unsigned char Y = mem65 + 1;
-                if(Y == mem64) {
+                if(Y  == mem64) {
                     mem61 = mem60;
                     
                     if (debug) PrintRule(mem62);
