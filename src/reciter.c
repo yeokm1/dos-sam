@@ -174,13 +174,8 @@ pos36677:
 
 pos36700:
 	// find next rule
-	Y = 0;
-	do {
-		mem62 += 1;
-		A = GetRuleByte(mem62, Y);
-	} while ((A & 128) == 0);
-	Y++;
-
+	while ((GetRuleByte(++mem62, 0) & 128) == 0);
+	Y = 1;
 	while(GetRuleByte(mem62, Y) != '(') ++Y;
 	mem66 = Y;
     while(GetRuleByte(mem62, ++Y) != ')');
@@ -196,8 +191,7 @@ pos36700:
 	while(1) {
 		if (GetRuleByte(mem62, Y) != inputtemp[X]) goto pos36700;
 		if(++Y == mem65) break;
-		++X;
-		mem60 = X;
+		mem60 = ++X;
 	}
 
 
@@ -208,12 +202,9 @@ pos36700:
     while(1) {
         while(1) {
             mem66--;
-            Y = mem66;
-            A = GetRuleByte(mem62, Y);
-            mem57 = A;
+            mem57 = A = GetRuleByte(mem62, mem66);
             if ((A & 128) != 0) {
-                A = mem60;
-                mem58 = A;
+                mem58 = mem60;
                 goto pos37184;
             }
             X = A & 127;
@@ -289,22 +280,20 @@ pos36700:
         X = mem58+1;
         A = inputtemp[X];
         
-        if (A != 'E') {
+        if (A == 'E') {
+            if((tab36376[inputtemp[X+1]] & 128) != 0) {
+                A = inputtemp[++X];
+                if ((A != 'R') && (A != 'S') && (A != 'D')) {
+                    if (A == 'L') {
+                        if (inputtemp[++X] != 'Y') goto pos36700;
+                    } else {
+                        if (!match("FUL")) goto pos36700;
+                    } 
+                }
+            }
+        } else {
             if (!match("ING")) goto pos36700;
             mem58 = X;
-            goto pos37184;
-        }
-        
-        Y = inputtemp[X+1];
-        if((tab36376[Y] & 128) != 0) {
-            A = inputtemp[++X];
-            if ((A != 'R') && (A != 'S') && (A != 'D')) {
-                if (A == 'L') {
-                    if (inputtemp[++X] != 'Y') goto pos36700;
-                } else {
-                    if (!match("FUL")) goto pos36700;
-                } 
-            }
         }
         
 pos37184:
