@@ -278,9 +278,8 @@ pos36700:
 
     do {
         X = mem58+1;
-        A = inputtemp[X];
-        
-        if (A == 'E') {
+
+        if (inputtemp[X] == 'E') {
             if((tab36376[inputtemp[X+1]] & 128) != 0) {
                 A = inputtemp[++X];
                 if ((A != 'R') && (A != 'S') && (A != 'D')) {
