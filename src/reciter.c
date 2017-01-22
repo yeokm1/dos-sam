@@ -88,16 +88,14 @@ pos36554:
             
             if (A != '.') break;
             X++;
-            Y = inputtemp[X];
-            A = tab36376[Y] & 1;
+            A = tab36376[inputtemp[X]] & 1;
             if(A != 0) break;
             mem56++;
             X = mem56;
             A = '.';
             input[X] = '.';
         }
-        Y = mem64;
-        mem57 = tab36376[Y];
+        mem57 = tab36376[mem64];
         if((mem57&2) != 0) {
             mem62 = 37541;
             goto pos36700;
