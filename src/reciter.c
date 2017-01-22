@@ -311,98 +311,74 @@ pos36700:
         
 pos37184:
         while (1) {
-            unsigned char Y = mem65 + 1;
-            if(Y == mem64) {
-                mem61 = mem60;
-                
-                if (debug) PrintRule(mem62);
-                
-                while(1) {
-                    mem57 = A = GetRuleByte(mem62, Y);
-                    A = A & 127;
-                    if (A != '=') input[++mem56] = A;
-                    if ((mem57 & 128) != 0) goto pos36554;
-                    Y++;
-                }
-            }
-            mem65 = Y;
-            mem57 = GetRuleByte(mem62, Y);
-            if((tab36376[mem57] & 128) == 0) break;
-            if (inputtemp[mem58+1] != mem57) goto pos36700;
-            ++mem58;
-        }
-
-        A = mem57;
-        if (A == ' ') {
-            if (Code37066(mem58, 128) == 0) {
-                mem58 = X;
-                goto pos37184;
-            }
-            goto pos36700;
-        }
-        
-        if (A == '#') {
-            if (Code37066(mem58, 64) == 0) goto pos36700;
-            mem58 = X;
-            goto pos37184;
-        }
-        if (A == '.') {
-            if(Code37066(mem58, 8) == 0) goto pos36700;
-            mem58 = X;
-            goto pos37184;
-        }
-
-        if (A == '&') {
-            if(Code37066(mem58, 16) != 0) {
-                mem58 = X;
-                goto pos37184;
-            }
-            if (inputtemp[X] == 72) {
-                A = inputtemp[++X];
-                if ((A == 67) || (A == 83)) {
-                    mem58 = X;
-                    goto pos37184;
-                }
-            }
-            goto pos36700;
-        }
-        if (A == '@') {
-            if(Code37066(mem58, 4) != 0) {
-                mem58 = X;
-                goto pos37184;
-            }
-            A = inputtemp[X];
-            if (A != 72) goto pos36700;
-            if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
-            mem58 = X;
-            goto pos37184;
-        }
-        
-        if (A == '^') {
-            if (Code37066(mem58, 32) != 0) {
-                mem58 = X;
-                goto pos37184;
-            }
-            goto pos36700;
-        }
-        
-        if (A == '+') {
-            X = mem58 + 1;
-            A = inputtemp[X];
-            if ((A == 69) || (A == 73) || (A == 89)) {
-                mem58 = X;
-                goto pos37184;
-            }
-            goto pos36700;
-        }
-        
-        if (A == ':') {
             while (1) {
-                if(Code37066(mem58, 32) == 0) goto pos37184;
+                unsigned char Y = mem65 + 1;
+                if(Y == mem64) {
+                    mem61 = mem60;
+                    
+                    if (debug) PrintRule(mem62);
+                    
+                    while(1) {
+                        mem57 = A = GetRuleByte(mem62, Y);
+                        A = A & 127;
+                        if (A != '=') input[++mem56] = A;
+                        if ((mem57 & 128) != 0) goto pos36554;
+                        Y++;
+                    }
+                }
+                mem65 = Y;
+                mem57 = GetRuleByte(mem62, Y);
+                if((tab36376[mem57] & 128) == 0) break;
+                if (inputtemp[mem58+1] != mem57) goto pos36700;
+                ++mem58;
+            }
+
+            A = mem57;
+            if (A == ' ') {
+                if (Code37066(mem58, 128) != 0) goto pos36700;
                 mem58 = X;
+            } else if (A == '#') {
+                if (Code37066(mem58, 64) == 0) goto pos36700;
+                mem58 = X;
+            } else if (A == '.') {
+                if(Code37066(mem58, 8) == 0) goto pos36700;
+                mem58 = X;
+            } else if (A == '&') {
+                if(Code37066(mem58, 16) == 0) {
+                    if (inputtemp[X] == 72) {
+                        A = inputtemp[++X];
+                        if ((A == 67) || (A == 83)) {
+                            mem58 = X;
+                            continue;
+                        }
+                    }
+                    goto pos36700;
+                }
+                mem58 = X;
+            } else if (A == '@') {
+                if(Code37066(mem58, 4) == 0) {
+                    A = inputtemp[X];
+                    if (A != 72) goto pos36700;
+                    if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
+                    mem58 = X;
+                }
+            } else if (A == '^') {
+                if (Code37066(mem58, 32) == 0) goto pos36700;
+                mem58 = X;
+            } else if (A == '+') {
+                X = mem58 + 1;
+                A = inputtemp[X];
+                if ((A != 69) && (A != 73) && (A != 89)) goto pos36700;
+                mem58 = X;
+            } else if (A == ':') {
+                while (1) {
+                    if(Code37066(mem58, 32) == 0) break;
+                    mem58 = X;
+                }
+            } else {
+                break;
             }
         }
-        
     } while (A == '%');
 	return 0;
 }
