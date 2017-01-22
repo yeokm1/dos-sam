@@ -326,30 +326,30 @@ pos36700:
         mem59 = X;
     }
 
-pos37077:
-	X = mem58+1;
-	A = inputtemp[X];
-
-	if (A != 'E') {
-        if (!match("ING")) goto pos36700;
-        mem58 = X;
-        goto pos37184;
-    }
-
-	Y = inputtemp[X+1];
-    if((tab36376[Y] & 128) != 0) {
-        A = inputtemp[++X];
-        if ((A != 'R') && (A != 'S') && (A != 'D')) {
-            if (A == 'L') {
-                if (inputtemp[++X] != 'Y') goto pos36700;
-            } else {
-                if (!match("FUL")) goto pos36700;
-            } 
+    do {
+        X = mem58+1;
+        A = inputtemp[X];
+        
+        if (A != 'E') {
+            if (!match("ING")) goto pos36700;
+            mem58 = X;
+            goto pos37184;
         }
-    }
-
+        
+        Y = inputtemp[X+1];
+        if((tab36376[Y] & 128) != 0) {
+            A = inputtemp[++X];
+            if ((A != 'R') && (A != 'S') && (A != 'D')) {
+                if (A == 'L') {
+                    if (inputtemp[++X] != 'Y') goto pos36700;
+            } else {
+                    if (!match("FUL")) goto pos36700;
+                } 
+            }
+        }
+        
 pos37184:
-    while(1) {
+        while (1) {
         Y = mem65 + 1;
         if(Y == mem64) {
             Y = mem64;
@@ -417,7 +417,7 @@ pos37184:
         A = inputtemp[X];
         if ((A == 67) || (A == 83)) {
             mem58 = X;
-        goto pos37184;
+            goto pos37184;
         }
         goto pos36700;
     }
@@ -464,7 +464,7 @@ pos37184:
         }
     }
 
-	if (A == 37) goto pos37077;   // '%'
+    } while (A == '%');
 	return 0;
 }
 
