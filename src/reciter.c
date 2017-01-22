@@ -326,10 +326,6 @@ pos36700:
         mem59 = X;
     }
 
-
-//---------------------------------------
-
-
 pos37077:
 	X = mem58+1;
 	A = inputtemp[X];
@@ -353,33 +349,63 @@ pos37077:
     }
 
 pos37184:
-	Y = mem65 + 1;
+    while(1) {
+        Y = mem65 + 1;
+        if(Y == mem64) goto pos37455;
+        mem65 = Y;
+        mem57 = GetRuleByte(mem62, Y);
+        if((tab36376[mem57] & 128) == 0) break;
+        A = inputtemp[mem58+1];
+        if (A != mem57) goto pos36700;
+        ++mem58;
+    }
 
-	//37187: CPY 64
-	//	if(? != 0) goto pos37194;
-	if(Y == mem64) goto pos37455;
-	mem65 = Y;
-	//37196: LDA (62),y
-	A = GetRuleByte(mem62, Y);
-	mem57 = A;
-	X = A;
-	A = tab36376[X] & 128;
-	if(A == 0) goto pos37226;
-	X = mem58+1;
-	A = inputtemp[X];
-	if (A != mem57) goto pos36700;
-	mem58 = X;
-	goto pos37184;
-
-pos37226:
 	A = mem57;
-	if (A == 32) goto pos37295;   // ' '
-	if (A == 35) goto pos37310;   // '#'
-	if (A == 46) goto pos37320;   // '.'
-	if (A == 38) goto pos37335;   // '&'
-	if (A == 64) goto pos37367;   // ''
-	if (A == 94) goto pos37404;   // ''
-	if (A == 43) goto pos37419;   // '+'
+	if (A == ' ') {
+        Code37066(mem58);
+        A = A & 128;
+        if(A != 0) goto pos36700;
+        mem58 = X;
+        goto pos37184;
+    }
+
+	if (A == '#') {
+        Code37066(mem58);
+        if((A & 64) != 0) {
+            mem58 = X;
+            goto pos37184;
+        }
+        goto pos36700;
+    }
+	if (A == '.') {
+        Code37066(mem58);
+        A = A & 8;
+        if(A == 0) goto pos36700;
+        mem58 = X;
+        goto pos37184;
+    }
+
+	if (A == '&') {
+        Code37066(mem58);
+        A = A & 16;
+        if(A != 0) {
+            mem58 = X;
+            goto pos37184;
+        }
+        A = inputtemp[X];
+        if (A != 72) goto pos36700;
+        X++;
+        A = inputtemp[X];
+        if ((A == 67) || (A == 83)) {
+            mem58 = X;
+        goto pos37184;
+        }
+        goto pos36700;
+    }
+	if (A == '@') goto pos37367;
+	if (A == '^') goto pos37404;
+	if (A == '+') goto pos37419;
+
 	if (A == ':') {
         while (1) {
             Code37066(mem58);
@@ -391,45 +417,6 @@ pos37226:
 
 	if (A == 37) goto pos37077;   // '%'
 	return 0;
-
-pos37295:
-	Code37066(mem58);
-	A = A & 128;
-	if(A != 0) goto pos36700;
-	mem58 = X;
-	goto pos37184;
-
-pos37310:
-	Code37066(mem58);
-    if((A & 64) != 0) {
-        mem58 = X;
-        goto pos37184;
-    }
-	goto pos36700;
-
-pos37320:
-	Code37066(mem58);
-	A = A & 8;
-	if(A == 0) goto pos36700;
-	mem58 = X;
-	goto pos37184;
-
-pos37335:
-	Code37066(mem58);
-	A = A & 16;
-	if(A != 0) {
-        mem58 = X;
-        goto pos37184;
-    }
-	A = inputtemp[X];
-	if (A != 72) goto pos36700;
-	X++;
-	A = inputtemp[X];
-	if ((A == 67) || (A == 83)) {
-        mem58 = X;
-        goto pos37184;
-    }
-	goto pos36700;
 
 pos37367:
 	Code37066(mem58);
