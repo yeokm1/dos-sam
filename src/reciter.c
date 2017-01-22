@@ -23,9 +23,7 @@ unsigned char Code37055(unsigned char mem59)
 unsigned char Code37066(unsigned char mem58, unsigned char mask)
 {
 	X = mem58 + 1;
-	Y = inputtemp[X];
-	A = tab36376[Y] & mask;
-    return A;
+    return tab36376[inputtemp[X]] & mask;
 }
 
 unsigned int match(const char * str) {
@@ -336,25 +334,19 @@ pos37184:
             A = mem57;
             if (A == ' ') {
                 if (Code37066(mem58, 128) != 0) goto pos36700;
-                mem58 = X;
             } else if (A == '#') {
                 if (Code37066(mem58, 64) == 0) goto pos36700;
-                mem58 = X;
             } else if (A == '.') {
                 if(Code37066(mem58, 8) == 0) goto pos36700;
-                mem58 = X;
             } else if (A == '&') {
                 if(Code37066(mem58, 16) == 0) {
-                    if (inputtemp[X] == 72) {
-                        A = inputtemp[++X];
-                        if ((A == 67) || (A == 83)) {
-                            mem58 = X;
-                            continue;
-                        }
+                    if (inputtemp[X] != 72) goto pos36700;
+                    A = inputtemp[++X];
+                    if ((A == 67) || (A == 83)) {
+                        mem58 = X;
+                        continue;
                     }
-                    goto pos36700;
                 }
-                mem58 = X;
             } else if (A == '@') {
                 if(Code37066(mem58, 4) == 0) {
                     A = inputtemp[X];
@@ -362,22 +354,23 @@ pos37184:
                     if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
                     mem58 = X;
                 }
+                continue;
             } else if (A == '^') {
                 if (Code37066(mem58, 32) == 0) goto pos36700;
-                mem58 = X;
             } else if (A == '+') {
                 X = mem58 + 1;
                 A = inputtemp[X];
                 if ((A != 69) && (A != 73) && (A != 89)) goto pos36700;
-                mem58 = X;
             } else if (A == ':') {
                 while (1) {
                     if(Code37066(mem58, 32) == 0) break;
                     mem58 = X;
                 }
+                continue;
             } else {
                 break;
             }
+            mem58 = X;
         }
     } while (A == '%');
 	return 0;
