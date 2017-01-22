@@ -284,10 +284,7 @@ pos37184:
                 A = inputtemp[X];
                 if ((A != 69) && (A != 73) && (A != 89)) goto pos36700;
             } else if (A == ':') {
-                while (1) {
-                    if(Code37066(mem58, 32) == 0) break;
-                    mem58 = X;
-                }
+                while (Code37066(mem58, 32)) mem58 = X;
                 continue;
             } else {
                 break;
