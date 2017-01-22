@@ -187,8 +187,7 @@ pos36700:
             break;
             
         case '^':
-            A = Code37055(mem59) & 32;
-            if(A == 0) goto pos36700;
+            if(!(Code37055(mem59) & 32)) goto pos36700;
             break;
             
         case '+':
