@@ -219,27 +219,21 @@ pos36700:
         unsigned char ch = mem57;
         switch(ch) {
         case ' ':
-            A = Code37055(mem59) & 128;
-            if(A != 0) goto pos36700;
+            if((Code37055(mem59) & 128)) goto pos36700;
             break;
             
         case '#':
-            A = Code37055(mem59) & 64;
-            if(A == 0) goto pos36700;
+            if(!(Code37055(mem59) & 64)) goto pos36700;
             break;
             
         case '.':
-            A = Code37055(mem59) & 8;
-            if(A == 0) goto pos36700;
+            if(!(Code37055(mem59) & 8)) goto pos36700;
             break;
             
         case '&':
-            A = Code37055(mem59) & 16;
-            if(A == 0) {
-                A = inputtemp[X];
-                if (A != 72) goto pos36700;
-                X--;
-                A = inputtemp[X];
+            if (!(Code37055(mem59) & 16)) {
+                if (inputtemp[X] != 72) goto pos36700;
+                A = inputtemp[--X];
                 if ((A != 67) && (A != 83)) goto pos36700;
             }
             break;
