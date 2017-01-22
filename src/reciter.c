@@ -242,7 +242,11 @@ pos36700:
             Y = mem66;
             A = GetRuleByte(mem62, Y);
             mem57 = A;
-            if ((A & 128) != 0) goto pos37180;
+            if ((A & 128) != 0) {
+                A = mem60;
+                mem58 = A;
+                goto pos37184;
+            }
             X = A & 127;
             A = tab36376[X] & 128;
             if (A == 0) break;
@@ -350,22 +354,16 @@ pos37135:
 	goto pos36700;
 
 pos37157:
-	if (A != 73) goto pos36700;
-	X++;
-	A = inputtemp[X];
-	if (A != 78) goto pos36700;
-	X++;
-	A = inputtemp[X];
-	if (A == 71) goto pos37108;
-	//pos37177:
+	if (A == 73) {
+        X++;
+        A = inputtemp[X];
+        if (A == 78) {
+            X++;
+            A = inputtemp[X];
+            if (A == 71) goto pos37108;
+        }
+    }
 	goto pos36700;
-
-	// -----------------------------------------
-
-pos37180:
-
-	A = mem60;
-	mem58 = A;
 
 pos37184:
 	Y = mem65 + 1;
@@ -385,6 +383,7 @@ pos37184:
 	if (A != mem57) goto pos36700;
 	mem58 = X;
 	goto pos37184;
+
 pos37226:
 	A = mem57;
 	if (A == 32) goto pos37295;   // ' '
@@ -415,8 +414,7 @@ pos37295:
 
 pos37310:
 	Code37066(mem58);
-	A = A & 64;
-	if(A != 0) {
+    if((A & 64) != 0) {
         mem58 = X;
         goto pos37184;
     }
@@ -487,7 +485,7 @@ pos37455:
         A = GetRuleByte(mem62, Y);
         mem57 = A;
         A = A & 127;
-        if (A != '=')
+        if (A != '=') 
             {
                 mem56++;
                 X = mem56;
