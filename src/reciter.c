@@ -198,7 +198,7 @@ pos36700:
             break;
             
         case ':':
-            while ((A = (Code37055(mem59) & 32))) --mem59;
+            while (Code37055(mem59) & 32) --mem59;
             continue;
             
         default:
