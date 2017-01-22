@@ -28,6 +28,16 @@ void Code37066(unsigned char mem58)
 	A = tab36376[Y];
 }
 
+unsigned int match(const char * str) {
+    unsigned char ch;
+    while ((ch = *str)) {
+        A = inputtemp[X++];
+        if (A != ch) return 0;
+        ++str;
+    }
+    return 1;
+}
+
 unsigned char GetRuleByte(unsigned short mem62, unsigned char Y)
 {
 	unsigned int address = mem62;
@@ -323,47 +333,28 @@ pos36700:
 pos37077:
 	X = mem58+1;
 	A = inputtemp[X];
-	if (A != 'E') goto pos37157;
+
+	if (A != 'E') {
+        if (!match("ING")) goto pos36700;
+        mem58 = X;
+        goto pos37184;
+    }
+
 	X++;
 	Y = inputtemp[X];
 	X--;
 	A = tab36376[Y] & 128;
-	if(A == 0) goto pos37108;
-	X++;
-	A = inputtemp[X];
-	if (A != 'R') goto pos37113;
-pos37108:
-	mem58 = X;
-	goto pos37184;
-pos37113:
-	if ((A == 83) || (A == 68)) goto pos37108;  // 'S' 'D'
-	if (A != 76) goto pos37135; // 'L'
-	X++;
-	A = inputtemp[X];
-	if (A != 89) goto pos36700;
-	goto pos37108;
-	
-pos37135:
-	if (A == 'F') {
-        A = inputtemp[++X];
-        if (A == 'U') {
-            A = inputtemp[++X];
-            if (A == 76) goto pos37108;
-        }
-    }
-	goto pos36700;
-
-pos37157:
-	if (A == 'I') {
+	if(A != 0) {
         X++;
         A = inputtemp[X];
-        if (A == 'N') {
-            X++;
-            A = inputtemp[X];
-            if (A == 'G') goto pos37108;
+        if ((A != 'R') && (A != 'S') && (A != 'D')) {
+            if (A == 'L') {
+                if (inputtemp[++X] != 'Y') goto pos36700;
+            } else {
+                if (!match("FUL")) goto pos36700;
+            } 
         }
     }
-	goto pos36700;
 
 pos37184:
 	Y = mem65 + 1;
