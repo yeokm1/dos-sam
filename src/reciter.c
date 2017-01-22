@@ -239,8 +239,7 @@ pos36700:
             break;
             
         case '@':
-            A = Code37055(mem59) & 4;
-            if(A == 0) { 
+            if(!(Code37055(mem59) & 4)) { 
                 A = inputtemp[X];
                 if (A != 72) goto pos36700;
                 if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
