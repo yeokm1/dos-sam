@@ -429,12 +429,6 @@ pos37320:
 	mem58 = X;
 	goto pos37184;
 
-pos37330:
-	mem58 = X;
-	goto pos37184;
-
-	// --------------
-
 pos37335:
 	Code37066(mem58);
 	A = A & 16;
@@ -455,7 +449,10 @@ pos37335:
 pos37367:
 	Code37066(mem58);
 	A = A & 4;
-	if(A != 0) goto pos37330;
+	if(A != 0) {
+        mem58 = X;
+        goto pos37184;
+    }
 	A = inputtemp[X];
 	if (A != 72) goto pos36700;
 	if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
