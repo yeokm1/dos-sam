@@ -467,9 +467,11 @@ pos37367:
 pos37404:
 	Code37066(mem58);
 	A = A & 32;
-	if(A == 0) goto pos36700;
-	mem58 = X;
-	goto pos37184;
+	if(A != 0) {
+        mem58 = X;
+        goto pos37184;
+    }
+    goto pos36700;
 
 pos37419:
 	X = mem58 + 1;
