@@ -284,49 +284,36 @@ void InsertBreath()
 
 
 //void Code41883()
-void CopyStress()
-{
+void CopyStress() {
     // loop thought all the phonemes to be output
 	unsigned char pos=0; //mem66
-	while(1)
-	{
-        // get the phomene
-		Y = phonemeindex[pos];
-		
-	    // exit at end of buffer
-		if (Y == 255) return;
-		
+    unsigned char Y;
+	while((Y = phonemeindex[pos]) != 255) {
 		// if CONSONANT_FLAG set, skip - only vowels get stress
 		if ((flags[Y] & 64) == 0) {pos++; continue;}
-		// get the next phoneme
 		Y = phonemeindex[pos+1];
 		if (Y == 255) //prevent buffer overflow
 		{
 			pos++; continue;
-		} else
+		}
 		// if the following phoneme is a vowel, skip
-		if ((flags[Y] & 128) == 0)  {pos++; continue;}
+        if ((flags[Y] & 128) == 0)  {pos++; continue;}
 
         // get the stress value at the next position
 		Y = stress[pos+1];
-		
+
 		// if next phoneme is not stressed, skip
 		if (Y == 0)  {pos++; continue;}
-
 		// if next phoneme is not a VOWEL OR ER, skip
 		if ((Y & 128) != 0)  {pos++; continue;}
 
 		// copy stress from prior phoneme to this one
 		stress[pos] = Y+1;
 		
-		// advance pointer
-		pos++;
+		++pos;
 	}
-
 }
 
-
-//void Code41014()
 void Insert(unsigned char position/*var57*/, unsigned char mem60, unsigned char mem59, unsigned char mem58)
 {
 	int i;
@@ -1412,42 +1399,4 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeind
          loopIndex++;
          continue;
     }
-//            goto pos48701;
 }
-
-// -------------------------------------------------------------------------
-// ML : Code47503 is division with remainder, and mem50 gets the sign
-void Code47503(unsigned char mem52)
-{
-
-	Y = 0;
-	if ((mem53 & 128) != 0)
-	{
-		mem53 = -mem53;
-		Y = 128;
-	}
-	mem50 = Y;
-	A = 0;
-	for(X=8; X > 0; X--)
-	{
-		int temp = mem53;
-		mem53 = mem53 << 1;
-		A = A << 1;
-		if (temp >= 128) A++;
-		if (A >= mem52)
-		{
-			A = A - mem52;
-			mem53++;
-		}
-	}
-
-	mem51 = A;
-	if ((mem50 & 128) != 0) mem53 = -mem53;
-
-}
-
-
-
-
-
-
