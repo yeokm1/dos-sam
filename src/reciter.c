@@ -155,12 +155,12 @@ pos36700:
     while(1) {
         while(1) {
             mem66--;
-            mem57 = A = GetRuleByte(mem62, mem66);
-            if ((A & 128) != 0) {
+            mem57 = GetRuleByte(mem62, mem66);
+            if ((mem57 & 128) != 0) {
                 mem58 = mem60;
                 goto pos37184;
             }
-            X = A & 127;
+            X = mem57 & 127;
             if ((tab36376[X] & 128) == 0) break;
             if (inputtemp[mem59-1] != mem57) goto pos36700;
             --mem59;
