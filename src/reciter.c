@@ -354,13 +354,13 @@ pos37135:
 	goto pos36700;
 
 pos37157:
-	if (A == 73) {
+	if (A == 'I') {
         X++;
         A = inputtemp[X];
-        if (A == 78) {
+        if (A == 'N') {
             X++;
             A = inputtemp[X];
-            if (A == 71) goto pos37108;
+            if (A == 'G') goto pos37108;
         }
     }
 	goto pos36700;
