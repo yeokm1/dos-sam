@@ -340,9 +340,7 @@ pos37077:
         goto pos37184;
     }
 
-	X++;
-	Y = inputtemp[X];
-	X--;
+	Y = inputtemp[X+1];
 	A = tab36376[Y] & 128;
 	if(A != 0) {
         X++;
