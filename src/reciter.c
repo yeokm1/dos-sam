@@ -340,13 +340,13 @@ pos37113:
 	goto pos37108;
 	
 pos37135:
-	if (A != 70) goto pos36700;
-	X++;
-	A = inputtemp[X];
-	if (A != 85) goto pos36700;
-	X++;
-	A = inputtemp[X];
-	if (A == 76) goto pos37108;
+	if (A == 'F') {
+        A = inputtemp[++X];
+        if (A == 'U') {
+            A = inputtemp[++X];
+            if (A == 76) goto pos37108;
+        }
+    }
 	goto pos36700;
 
 pos37157:
@@ -404,30 +404,23 @@ pos37226:
     }
 
 	if (A == 37) goto pos37077;   // '%'
-	//pos37291:
-	//	Code42041(); //Error
-	//37294: BRK
 	return 0;
 
-	// --------------
 pos37295:
 	Code37066(mem58);
 	A = A & 128;
 	if(A != 0) goto pos36700;
-pos37305:
 	mem58 = X;
 	goto pos37184;
-
-	// --------------
 
 pos37310:
 	Code37066(mem58);
 	A = A & 64;
-	if(A != 0) goto pos37305;
+	if(A != 0) {
+        mem58 = X;
+        goto pos37184;
+    }
 	goto pos36700;
-
-	// --------------
-
 
 pos37320:
 	Code37066(mem58);
@@ -458,9 +451,6 @@ pos37335:
         goto pos37184;
     }
 	goto pos36700;
-
-	// --------------
-
 
 pos37367:
 	Code37066(mem58);
