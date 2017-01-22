@@ -476,39 +476,31 @@ pos37419:
 // ----------------------
 
 pos37440:
+    while (1) {
+        Code37066(mem58);
+        A = A & 32;
+        if(A == 0) goto pos37184;
+        mem58 = X;
+    }
 
-	Code37066(mem58);
-	A = A & 32;
-	if(A == 0) goto pos37184;
-	mem58 = X;
-	goto pos37440;
 pos37455:
 	Y = mem64;
 	mem61 = mem60;
 
-	if (debug)
-		PrintRule(mem62);
+	if (debug) PrintRule(mem62);
 
-pos37461:
-	//37461: LDA (62),y
-	A = GetRuleByte(mem62, Y);
-	mem57 = A;
-	A = A & 127;
-	if (A != '=')
-	{
-		mem56++;
-		X = mem56;
-		input[X] = A;
-	}
-
-	//37478: BIT 57
-	//37480: BPL 37485  //not negative flag
-	if ((mem57 & 128) == 0) goto pos37485; //???
-	goto pos36554;
-pos37485:
+    while(1) {
+        A = GetRuleByte(mem62, Y);
+        mem57 = A;
+        A = A & 127;
+        if (A != '=')
+            {
+                mem56++;
+                X = mem56;
+                input[X] = A;
+            }
+        if ((mem57 & 128) != 0) goto pos36554;
 	Y++;
-	goto pos37461;
+    }
 }
-
-
 
