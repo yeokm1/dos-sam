@@ -13,10 +13,7 @@ static unsigned char inputtemp[256];   // secure copy of input tab36096
 unsigned char Code37055(unsigned char mem59)
 {
 	X = mem59 - 1;
-	unsigned char A = inputtemp[X];
-	Y = A;
-	A = tab36376[A];
-	return A;
+	return tab36376[inputtemp[X]];
 }
 
 /* Retrieve flags for character at mem58 + 1 */
@@ -164,12 +161,9 @@ pos36700:
                 goto pos37184;
             }
             X = A & 127;
-            A = tab36376[X] & 128;
-            if (A == 0) break;
-            X = mem59-1;
-            A = inputtemp[X];
-            if (A != mem57) goto pos36700;
-            mem59 = X;
+            if ((tab36376[X] & 128) == 0) break;
+            if (inputtemp[mem59-1] != mem57) goto pos36700;
+            --mem59;
         }
 
         unsigned char ch = mem57;
@@ -188,9 +182,9 @@ pos36700:
             
         case '&':
             if (!(Code37055(mem59) & 16)) {
-                if (inputtemp[X] != 72) goto pos36700;
+                if (inputtemp[X] != 'H') goto pos36700;
                 A = inputtemp[--X];
-                if ((A != 67) && (A != 83)) goto pos36700;
+                if ((A != 'C') && (A != 'S')) goto pos36700;
             }
             break;
             
