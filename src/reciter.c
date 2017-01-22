@@ -120,7 +120,7 @@ pos36554:
 pos36700:
 	// find next rule
 	while ((GetRuleByte(++mem62, 0) & 128) == 0);
-	Y = 1;
+	unsigned char Y = 1;
 	while(GetRuleByte(mem62, Y) != '(') ++Y;
 	mem66 = Y;
     while(GetRuleByte(mem62, ++Y) != ')');
