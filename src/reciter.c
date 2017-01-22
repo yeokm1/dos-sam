@@ -20,12 +20,12 @@ unsigned char Code37055(unsigned char mem59)
 }
 
 /* Retrieve flags for character at mem58 + 1 */
-void Code37066(unsigned char mem58)
+unsigned char Code37066(unsigned char mem58, unsigned char mask)
 {
 	X = mem58 + 1;
-	A = inputtemp[X];
-	Y = A;
-	A = tab36376[Y];
+	Y = inputtemp[X];
+	A = tab36376[Y] & mask;
+    return A;
 }
 
 unsigned int match(const char * str) {
@@ -205,8 +205,7 @@ pos36700:
 
     // the string in the bracket is correct
 
-	A = mem61;
-	mem59 = mem61;
+	A = mem59 = mem61;
 
     while(1) {
         while(1) {
@@ -312,23 +311,16 @@ pos36700:
         
 pos37184:
         while (1) {
-            Y = mem65 + 1;
+            unsigned char Y = mem65 + 1;
             if(Y == mem64) {
-                Y = mem64;
                 mem61 = mem60;
                 
                 if (debug) PrintRule(mem62);
                 
                 while(1) {
-                    A = GetRuleByte(mem62, Y);
-                    mem57 = A;
+                    mem57 = A = GetRuleByte(mem62, Y);
                     A = A & 127;
-                    if (A != '=') 
-                    {
-                        mem56++;
-                        X = mem56;
-                        input[X] = A;
-                    }
+                    if (A != '=') input[++mem56] = A;
                     if ((mem57 & 128) != 0) goto pos36554;
                     Y++;
                 }
@@ -336,57 +328,46 @@ pos37184:
             mem65 = Y;
             mem57 = GetRuleByte(mem62, Y);
             if((tab36376[mem57] & 128) == 0) break;
-            A = inputtemp[mem58+1];
-            if (A != mem57) goto pos36700;
+            if (inputtemp[mem58+1] != mem57) goto pos36700;
             ++mem58;
         }
 
         A = mem57;
         if (A == ' ') {
-            Code37066(mem58);
-            A = A & 128;
-            if(A != 0) goto pos36700;
-            mem58 = X;
-            goto pos37184;
-        }
-        
-        if (A == '#') {
-            Code37066(mem58);
-            if((A & 64) != 0) {
+            if (Code37066(mem58, 128) == 0) {
                 mem58 = X;
                 goto pos37184;
             }
             goto pos36700;
         }
+        
+        if (A == '#') {
+            if (Code37066(mem58, 64) == 0) goto pos36700;
+            mem58 = X;
+            goto pos37184;
+        }
         if (A == '.') {
-            Code37066(mem58);
-            A = A & 8;
-            if(A == 0) goto pos36700;
+            if(Code37066(mem58, 8) == 0) goto pos36700;
             mem58 = X;
             goto pos37184;
         }
 
         if (A == '&') {
-            Code37066(mem58);
-            A = A & 16;
-            if(A != 0) {
+            if(Code37066(mem58, 16) != 0) {
                 mem58 = X;
                 goto pos37184;
             }
-            A = inputtemp[X];
-            if (A != 72) goto pos36700;
-            X++;
-            A = inputtemp[X];
-            if ((A == 67) || (A == 83)) {
-                mem58 = X;
-                goto pos37184;
+            if (inputtemp[X] == 72) {
+                A = inputtemp[++X];
+                if ((A == 67) || (A == 83)) {
+                    mem58 = X;
+                    goto pos37184;
+                }
             }
             goto pos36700;
         }
         if (A == '@') {
-            Code37066(mem58);
-            A = A & 4;
-            if(A != 0) {
+            if(Code37066(mem58, 4) != 0) {
                 mem58 = X;
                 goto pos37184;
             }
@@ -398,9 +379,7 @@ pos37184:
         }
         
         if (A == '^') {
-            Code37066(mem58);
-            A = A & 32;
-            if(A != 0) {
+            if (Code37066(mem58, 32) != 0) {
                 mem58 = X;
                 goto pos37184;
             }
@@ -419,9 +398,7 @@ pos37184:
         
         if (A == ':') {
             while (1) {
-                Code37066(mem58);
-                A = A & 32;
-                if(A == 0) goto pos37184;
+                if(Code37066(mem58, 32) == 0) goto pos37184;
                 mem58 = X;
             }
         }
