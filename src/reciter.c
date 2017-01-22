@@ -49,9 +49,7 @@ unsigned char GetRuleByte(unsigned short mem62, unsigned char Y)
 int TextToPhonemes(char *input)
 {
 	unsigned char mem56;      //output position for phonemes
-	unsigned char mem57;
 	unsigned char mem58;
-	unsigned char mem59;
 	unsigned char mem60;
 	unsigned char mem61;
 	unsigned short mem62;     // memory position of current rule
@@ -74,6 +72,7 @@ int TextToPhonemes(char *input)
 	inputtemp[255] = 27;
 	mem56 = mem61 = 255;
 
+    unsigned char mem57;
 pos36554:
     while (1) {
         while(1) {
@@ -141,7 +140,7 @@ pos36700:
 
     // the string in the bracket is correct
 
-	mem59 = mem61;
+	unsigned char mem59 = mem61;
 
     while(1) {
         while(1) {
@@ -231,6 +230,7 @@ pos36700:
         
 pos37184:
         while (1) {
+            unsigned char mem57;
             while (1) {
                 unsigned char Y = mem65 + 1;
                 if(Y  == mem64) {
