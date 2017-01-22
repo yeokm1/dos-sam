@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <stdlib.h>
 #include "render.h"
 
@@ -48,6 +49,56 @@ extern unsigned char pitches[];
 
 extern unsigned char Read(unsigned char p, unsigned char Y);
 extern void Write(unsigned char p, unsigned char Y, unsigned char value);
+
+extern unsigned char frequency1[256];
+extern unsigned char frequency2[256];
+extern unsigned char frequency3[256];
+
+extern unsigned char amplitude1[256];
+extern unsigned char amplitude2[256];
+extern unsigned char amplitude3[256];
+
+//written by me because of different table positions.
+// mem[47] = ...
+// 168=pitches
+// 169=frequency1
+// 170=frequency2
+// 171=frequency3
+// 172=amplitude1
+// 173=amplitude2
+// 174=amplitude3
+unsigned char Read(unsigned char p, unsigned char Y)
+{
+	switch(p)
+	{
+	case 168: return pitches[Y];
+	case 169: return frequency1[Y];
+	case 170: return frequency2[Y];
+	case 171: return frequency3[Y];
+	case 172: return amplitude1[Y];
+	case 173: return amplitude2[Y];
+	case 174: return amplitude3[Y];
+	}
+	printf("Error reading to tables");
+	return 0;
+}
+
+void Write(unsigned char p, unsigned char Y, unsigned char value)
+{
+
+	switch(p)
+	{
+	case 168: pitches[Y] = value; return;
+	case 169: frequency1[Y] = value;  return;
+	case 170: frequency2[Y] = value;  return;
+	case 171: frequency3[Y] = value;  return;
+	case 172: amplitude1[Y] = value;  return;
+	case 173: amplitude2[Y] = value;  return;
+	case 174: amplitude3[Y] = value;  return;
+	}
+	printf("Error writing to tables\n");
+}
+
 
 unsigned char CreateTransitions()
 {
