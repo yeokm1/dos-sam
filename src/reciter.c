@@ -394,7 +394,15 @@ pos37226:
 	if (A == 64) goto pos37367;   // ''
 	if (A == 94) goto pos37404;   // ''
 	if (A == 43) goto pos37419;   // '+'
-	if (A == 58) goto pos37440;   // ':'
+	if (A == ':') {
+        while (1) {
+            Code37066(mem58);
+            A = A & 32;
+            if(A == 0) goto pos37184;
+            mem58 = X;
+        }
+    }
+
 	if (A == 37) goto pos37077;   // '%'
 	//pos37291:
 	//	Code42041(); //Error
@@ -460,28 +468,17 @@ pos37404:
 	Code37066(mem58);
 	A = A & 32;
 	if(A == 0) goto pos36700;
-pos37414:
 	mem58 = X;
 	goto pos37184;
 
-	// --------------
-	
 pos37419:
-	X = mem58;
-	X++;
+	X = mem58 + 1;
 	A = inputtemp[X];
-	if ((A == 69) || (A == 73) || (A == 89)) goto pos37414;
-	goto pos36700;
-
-// ----------------------
-
-pos37440:
-    while (1) {
-        Code37066(mem58);
-        A = A & 32;
-        if(A == 0) goto pos37184;
+	if ((A == 69) || (A == 73) || (A == 89)) {
         mem58 = X;
+        goto pos37184;
     }
+	goto pos36700;
 
 pos37455:
 	Y = mem64;
