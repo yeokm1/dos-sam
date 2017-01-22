@@ -351,7 +351,26 @@ pos37077:
 pos37184:
     while(1) {
         Y = mem65 + 1;
-        if(Y == mem64) goto pos37455;
+        if(Y == mem64) {
+            Y = mem64;
+            mem61 = mem60;
+            
+            if (debug) PrintRule(mem62);
+            
+            while(1) {
+                A = GetRuleByte(mem62, Y);
+                mem57 = A;
+                A = A & 127;
+                if (A != '=') 
+                    {
+                        mem56++;
+                        X = mem56;
+                        input[X] = A;
+                    }
+                if ((mem57 & 128) != 0) goto pos36554;
+                Y++;
+            }
+        }
         mem65 = Y;
         mem57 = GetRuleByte(mem62, Y);
         if((tab36376[mem57] & 128) == 0) break;
@@ -447,25 +466,5 @@ pos37184:
 
 	if (A == 37) goto pos37077;   // '%'
 	return 0;
-
-pos37455:
-	Y = mem64;
-	mem61 = mem60;
-
-	if (debug) PrintRule(mem62);
-
-    while(1) {
-        A = GetRuleByte(mem62, Y);
-        mem57 = A;
-        A = A & 127;
-        if (A != '=') 
-            {
-                mem56++;
-                X = mem56;
-                input[X] = A;
-            }
-        if ((mem57 & 128) != 0) goto pos36554;
-	Y++;
-    }
 }
 
