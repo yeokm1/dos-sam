@@ -379,17 +379,17 @@ void SetMouthThroat(unsigned char mouth, unsigned char throat)
 	}
 
 	// recalculate formant frequencies 48..53
-	pos = 48;
-    while(pos < 54) {
+	pos = 0;
+    while(pos < 6) {
 		// recalculate F1 (mouth formant)
-		initialFrequency = mouthFormants48_53[pos-48];
+		initialFrequency = mouthFormants48_53[pos];
 		newFrequency = trans(mouth, initialFrequency);
-		freq1data[pos] = newFrequency;
+		freq1data[pos+48] = newFrequency;
            
 		// recalculate F2 (throat formant)
-		initialFrequency = throatFormants48_53[pos-48];
+		initialFrequency = throatFormants48_53[pos];
 		newFrequency = trans(throat, initialFrequency);
-		freq2data[pos] = newFrequency;
+		freq2data[pos+48] = newFrequency;
 		pos++;
 	}
 }
