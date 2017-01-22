@@ -10,17 +10,10 @@ extern int debug;
 static unsigned char inputtemp[256];   // secure copy of input tab36096
 
 /* Retrieve flags for character at mem59-1 */
-unsigned char Code37055(unsigned char mem59, unsigned char mask)
+unsigned char Code37055(unsigned char npos, unsigned char mask)
 {
-	X = mem59 - 1;
+	X = npos;
 	return tab36376[inputtemp[X]] & mask;
-}
-
-/* Retrieve flags for character at mem58 + 1 */
-unsigned char Code37066(unsigned char mem58, unsigned char mask)
-{
-	X = mem58 + 1;
-    return tab36376[inputtemp[X]] & mask;
 }
 
 unsigned int match(const char * str) {
@@ -159,19 +152,19 @@ pos36700:
         unsigned char ch = mem57;
         switch(ch) {
         case ' ':
-            if(Code37055(mem59,128)) goto pos36700;
+            if(Code37055(mem59-1,128)) goto pos36700;
             break;
             
         case '#':
-            if(!Code37055(mem59, 64)) goto pos36700;
+            if(!Code37055(mem59-1, 64)) goto pos36700;
             break;
             
         case '.':
-            if(!Code37055(mem59,8)) goto pos36700;
+            if(!Code37055(mem59-1,8)) goto pos36700;
             break;
             
         case '&':
-            if (!Code37055(mem59,16)) {
+            if (!Code37055(mem59-1,16)) {
                 if (inputtemp[X] != 'H') goto pos36700;
                 A = inputtemp[--X];
                 if ((A != 'C') && (A != 'S')) goto pos36700;
@@ -179,7 +172,7 @@ pos36700:
             break;
             
         case '@':
-            if(!Code37055(mem59,4)) { 
+            if(!Code37055(mem59-1,4)) { 
                 A = inputtemp[X];
                 if (A != 72) goto pos36700;
                 if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
@@ -187,7 +180,7 @@ pos36700:
             break;
             
         case '^':
-            if(!Code37055(mem59,32)) goto pos36700;
+            if(!Code37055(mem59-1,32)) goto pos36700;
             break;
             
         case '+':
@@ -198,7 +191,7 @@ pos36700:
             break;
             
         case ':':
-            while (Code37055(mem59,32)) --mem59;
+            while (Code37055(mem59-1,32)) --mem59;
             continue;
             
         default:
@@ -254,13 +247,13 @@ pos37184:
 
             A = mem57;
             if (A == ' ') {
-                if (Code37066(mem58, 128) != 0) goto pos36700;
+                if (Code37055(mem58+1, 128) != 0) goto pos36700;
             } else if (A == '#') {
-                if (Code37066(mem58, 64) == 0) goto pos36700;
+                if (Code37055(mem58+1, 64) == 0) goto pos36700;
             } else if (A == '.') {
-                if(Code37066(mem58, 8) == 0) goto pos36700;
+                if(Code37055(mem58+1, 8) == 0) goto pos36700;
             } else if (A == '&') {
-                if(Code37066(mem58, 16) == 0) {
+                if(Code37055(mem58+1, 16) == 0) {
                     if (inputtemp[X] != 72) goto pos36700;
                     A = inputtemp[++X];
                     if ((A == 67) || (A == 83)) {
@@ -269,7 +262,7 @@ pos37184:
                     }
                 }
             } else if (A == '@') {
-                if(Code37066(mem58, 4) == 0) {
+                if(Code37055(mem58+1, 4) == 0) {
                     A = inputtemp[X];
                     if (A != 72) goto pos36700;
                     if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
@@ -277,13 +270,13 @@ pos37184:
                 }
                 continue;
             } else if (A == '^') {
-                if (Code37066(mem58, 32) == 0) goto pos36700;
+                if (Code37055(mem58+1, 32) == 0) goto pos36700;
             } else if (A == '+') {
                 X = mem58 + 1;
                 A = inputtemp[X];
                 if ((A != 69) && (A != 73) && (A != 89)) goto pos36700;
             } else if (A == ':') {
-                while (Code37066(mem58, 32)) mem58 = X;
+                while (Code37055(mem58+1, 32)) mem58 = X;
                 continue;
             } else {
                 break;
