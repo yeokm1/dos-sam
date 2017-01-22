@@ -453,7 +453,10 @@ pos37335:
 	if (A != 72) goto pos36700;
 	X++;
 	A = inputtemp[X];
-	if ((A == 67) || (A == 83)) goto pos37330;
+	if ((A == 67) || (A == 83)) {
+        mem58 = X;
+        goto pos37184;
+    }
 	goto pos36700;
 
 	// --------------
