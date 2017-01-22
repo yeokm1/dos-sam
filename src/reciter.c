@@ -341,10 +341,8 @@ pos37077:
     }
 
 	Y = inputtemp[X+1];
-	A = tab36376[Y] & 128;
-	if(A != 0) {
-        X++;
-        A = inputtemp[X];
+    if((tab36376[Y] & 128) != 0) {
+        A = inputtemp[++X];
         if ((A != 'R') && (A != 'S') && (A != 'D')) {
             if (A == 'L') {
                 if (inputtemp[++X] != 'Y') goto pos36700;
