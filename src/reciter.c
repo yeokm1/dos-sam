@@ -168,75 +168,37 @@ pos36654:
 
 pos36677:
 	A = mem57 & 128;
-	if(A == 0)
-	{
-		//36683: BRK
-		return 0;
-	}
+	if(A == 0) return 0;
 
 	// go to the right rules for this character.
 	X = mem64 - 'A';
 	mem62 = tab37489[X] | (tab37515[X]<<8);
 
-	// -------------------------------------
-	// go to next rule
-	// -------------------------------------
-
 pos36700:
-
 	// find next rule
 	Y = 0;
-	do
-	{
+	do {
 		mem62 += 1;
 		A = GetRuleByte(mem62, Y);
 	} while ((A & 128) == 0);
 	Y++;
 
-	//pos36720:
-	// find '('
-	while(1)
-	{
-		A = GetRuleByte(mem62, Y);
-		if (A == '(') break;
-		Y++;
-	}
+	while(GetRuleByte(mem62, Y) != '(') ++Y;
 	mem66 = Y;
-
-	//pos36732:
-	// find ')'
-	do
-	{
-		Y++;
-		A = GetRuleByte(mem62, Y);
-	} while(A != ')');
+    while(GetRuleByte(mem62, ++Y) != ')');
 	mem65 = Y;
-
-	//pos36741:
-	// find '='
-	do
-	{
-		Y++;
-		A = GetRuleByte(mem62, Y);
-		A = A & 127;
-	} while (A != '=');
+	while((GetRuleByte(mem62, ++Y) & 127) != '=');
 	mem64 = Y;
 
-	X = mem61;
-	mem60 = X;
-
+	
+	mem60 = X = mem61;
 	// compare the string within the bracket
-	Y = mem66;
-	Y++;
-	//pos36759:
-	while(1)
-	{
-		mem57 = inputtemp[X];
-		A = GetRuleByte(mem62, Y);
-		if (A != mem57) goto pos36700;
-		Y++;
-		if(Y == mem65) break;
-		X++;
+	Y = mem66 + 1;
+
+	while(1) {
+		if (GetRuleByte(mem62, Y) != inputtemp[X]) goto pos36700;
+		if(++Y == mem65) break;
+		++X;
 		mem60 = X;
 	}
 
