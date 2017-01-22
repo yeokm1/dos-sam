@@ -10,10 +10,10 @@ extern int debug;
 static unsigned char inputtemp[256];   // secure copy of input tab36096
 
 /* Retrieve flags for character at mem59-1 */
-unsigned char Code37055(unsigned char mem59)
+unsigned char Code37055(unsigned char mem59, unsigned char mask)
 {
 	X = mem59 - 1;
-	return tab36376[inputtemp[X]];
+	return tab36376[inputtemp[X]] & mask;
 }
 
 /* Retrieve flags for character at mem58 + 1 */
@@ -159,19 +159,19 @@ pos36700:
         unsigned char ch = mem57;
         switch(ch) {
         case ' ':
-            if((Code37055(mem59) & 128)) goto pos36700;
+            if(Code37055(mem59,128)) goto pos36700;
             break;
             
         case '#':
-            if(!(Code37055(mem59) & 64)) goto pos36700;
+            if(!Code37055(mem59, 64)) goto pos36700;
             break;
             
         case '.':
-            if(!(Code37055(mem59) & 8)) goto pos36700;
+            if(!Code37055(mem59,8)) goto pos36700;
             break;
             
         case '&':
-            if (!(Code37055(mem59) & 16)) {
+            if (!Code37055(mem59,16)) {
                 if (inputtemp[X] != 'H') goto pos36700;
                 A = inputtemp[--X];
                 if ((A != 'C') && (A != 'S')) goto pos36700;
@@ -179,7 +179,7 @@ pos36700:
             break;
             
         case '@':
-            if(!(Code37055(mem59) & 4)) { 
+            if(!Code37055(mem59,4)) { 
                 A = inputtemp[X];
                 if (A != 72) goto pos36700;
                 if ((A != 84) && (A != 67) && (A != 83)) goto pos36700;
@@ -187,7 +187,7 @@ pos36700:
             break;
             
         case '^':
-            if(!(Code37055(mem59) & 32)) goto pos36700;
+            if(!Code37055(mem59,32)) goto pos36700;
             break;
             
         case '+':
@@ -198,7 +198,7 @@ pos36700:
             break;
             
         case ':':
-            while (Code37055(mem59) & 32) --mem59;
+            while (Code37055(mem59,32)) --mem59;
             continue;
             
         default:
