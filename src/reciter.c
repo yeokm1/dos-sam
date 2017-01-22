@@ -64,7 +64,6 @@ int TextToPhonemes(char *input) // Code36484
 	unsigned char mem64;      // position of '=' or current character
 	unsigned char mem65;     // position of ')'
 	unsigned char mem66;     // position of '('
-	unsigned char mem36653;
 
 	inputtemp[0] = 32;
 
@@ -72,105 +71,64 @@ int TextToPhonemes(char *input) // Code36484
 	// because input will be overwritten by phonemes
 	X = 1;
 	Y = 0;
-	do
-	{
-		//pos36499:
+	do {
 		A = input[Y] & 127;
 		if ( A >= 112) A = A & 95;
 		else if ( A >= 96) A = A & 79;
-		
+
 		inputtemp[X] = A;
 		X++;
 		Y++;
 	} while (Y != 255);
-
-
-	X = 255;
-	inputtemp[X] = 27;
+	inputtemp[255] = 27;
 	mem61 = 255;
-
-
-pos36550:
 	A = 255;
 	mem56 = 255;
 
-
 pos36554:
-	while(1)
-	{
-		mem61++;
-		X = mem61;
-		A = inputtemp[X];
-		mem64 = A;
-		if (A == '[')
-		{
-			mem56++;
-			X = mem56;
-			A = 155;
-			input[X] = 155;
-			//goto pos36542;
-			//			Code39771(); 	//Code39777();
-			return 1;
-		}
-
-		//pos36579:
-		if (A != '.') break;
-		X++;
-		Y = inputtemp[X];
-		A = tab36376[Y] & 1;
-		if(A != 0) break;
-		mem56++;
-		X = mem56;
-		A = '.';
-		input[X] = '.';
-	} //while
-
-
-	//pos36607:
-	A = mem64;
-	Y = A;
-	A = tab36376[A];
-	mem57 = A;
-	if((A&2) != 0)
-	{
-		mem62 = 37541;
-		goto pos36700;
-	}
-
-	//pos36630:
-	A = mem57;
-	if(A != 0) goto pos36677;
-	A = 32;
-	inputtemp[X] = ' ';
-	mem56++;
-	X = mem56;
-	if (X > 120) goto pos36654;
-	input[X] = A;
-	goto pos36554;
-
-	// -----
-
-	//36653 is unknown. Contains position
-
-pos36654:
-	input[X] = 155;
-	A = mem61;
-	mem36653 = A;
-	//	mem29 = A; // not used
-	//	Code36538(); das ist eigentlich
-	return 1;
-	//Code39771();
-	//go on if there is more input ???
-	mem61 = mem36653;
-	goto pos36550;
-
-pos36677:
-	A = mem57 & 128;
-	if(A == 0) return 0;
-
+    while (1) {
+        while(1) {
+            X = ++mem61;
+            A = inputtemp[X];
+            mem64 = A;
+            if (A == '[') {
+                X = ++mem56;
+                input[X] = 155;
+                return 1;
+            }
+            
+            if (A != '.') break;
+            X++;
+            Y = inputtemp[X];
+            A = tab36376[Y] & 1;
+            if(A != 0) break;
+            mem56++;
+            X = mem56;
+            A = '.';
+            input[X] = '.';
+        }
+        Y = mem64;
+        mem57 = tab36376[Y];
+        if((mem57&2) != 0) {
+            mem62 = 37541;
+            goto pos36700;
+        }
+        
+        if(mem57 != 0) break;
+        inputtemp[X] = ' ';
+        X = ++mem56;
+        if (X > 120) {
+            input[X] = 155;
+            return 1;
+        }
+        input[X] = 32;
+    }
+        
+    if(!(mem57 & 128)) return 0;
+        
 	// go to the right rules for this character.
-	X = mem64 - 'A';
-	mem62 = tab37489[X] | (tab37515[X]<<8);
+    X = mem64 - 'A';
+    mem62 = tab37489[X] | (tab37515[X]<<8);
 
 pos36700:
 	// find next rule
