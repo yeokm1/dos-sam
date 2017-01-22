@@ -390,15 +390,12 @@ int Parser1()
 	X = 0;
 	A = 0;
 	Y = 0;
-	
-	// CLEAR THE STRESS TABLE
-	for(i=0; i<256; i++)
-		stress[i] = 0;
 
-  // THIS CODE MATCHES THE PHONEME LETTERS TO THE TABLE
-	// pos41078:
-	while(1)
-	{
+	// CLEAR THE STRESS TABLE
+	for(i=0; i<256; i++) stress[i] = 0;
+
+    // THIS CODE MATCHES THE PHONEME LETTERS TO THE TABLE
+	while(1) {
         // GET THE FIRST CHARACTER FROM THE PHONEME BUFFER
 		sign1 = input[X];
 		// TEST FOR 155 (›) END OF LINE MARKER
