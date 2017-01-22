@@ -60,25 +60,19 @@ int TextToPhonemes(char *input)
 	unsigned char mem65;     // position of ')'
 	unsigned char mem66;     // position of '('
 
-	inputtemp[0] = 32;
+	inputtemp[0] = ' ';
 
 	// secure copy of input
 	// because input will be overwritten by phonemes
-	X = 1;
-	Y = 0;
+	X = 0;
 	do {
-		A = input[Y] & 127;
+		A = input[X] & 127;
 		if ( A >= 112) A = A & 95;
 		else if ( A >= 96) A = A & 79;
-
-		inputtemp[X] = A;
-		X++;
-		Y++;
-	} while (Y != 255);
+		inputtemp[++X] = A;
+	} while (X < 255);
 	inputtemp[255] = 27;
-	mem61 = 255;
-	A = 255;
-	mem56 = 255;
+	mem56 = mem61 = 255;
 
 pos36554:
     while (1) {
@@ -150,7 +144,7 @@ pos36700:
 
     // the string in the bracket is correct
 
-	A = mem59 = mem61;
+	mem59 = mem61;
 
     while(1) {
         while(1) {
