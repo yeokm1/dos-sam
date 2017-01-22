@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "render.h"
@@ -100,57 +99,72 @@ void Write(unsigned char p, unsigned char Y, unsigned char value)
 }
 
 
+// linearly interpolate values
+void interpolate(unsigned char width, unsigned char table, unsigned char frame, unsigned char mem53)
+{
+    unsigned char sign      = ((char)(mem53) < 0);
+    unsigned char remainder = abs((char)mem53) % width;
+    unsigned char div       = (unsigned char)((char)(mem53) / width);
+
+    unsigned char error = 0;
+    unsigned char pos   = width;
+    unsigned char val   = Read(table, frame) + div; 
+
+    while(--pos) {
+        error += remainder;
+        if (error >= width) { // accumulated a whole integer error, so adjust output
+            error -= width;
+            if (sign) val--;
+            else if (val) val++; // if input is 0, we always leave it alone
+        }
+        Write(table, ++frame, val); // Write updated value back to next frame.
+        val += div;
+    }
+}
+
+
 unsigned char CreateTransitions()
 {
     unsigned char phase1;
     unsigned char phase2;
-    unsigned char mem53;
-    unsigned char mem44 = 0;
 	unsigned char mem49 = 0; 
 	unsigned char pos = 0;
 	while(1) {
-        // get the current and following phoneme
-		unsigned char phoneme = phonemeIndexOutput[pos];
-		unsigned char A = phonemeIndexOutput[pos+1];
-		pos++;
+		unsigned char phoneme      = phonemeIndexOutput[pos];
+		unsigned char next_phoneme = phonemeIndexOutput[pos+1];
 
-		// exit loop at end token
-		if (A == 255) break;
+		if (next_phoneme == 255) break; // 255 == end_token
 
         // get the ranking of each phoneme
-		pos = A;
-		unsigned char mem56 = blendRank[A];
-
-		unsigned char rank = blendRank[phoneme];
+		unsigned char next_rank = blendRank[next_phoneme];
+		unsigned char rank      = blendRank[phoneme];
 		
 		// compare the rank - lower rank value is stronger
-		if (rank == mem56) {
+		if (rank == next_rank) {
             // same rank, so use out blend lengths from each phoneme
 			phase1 = outBlendLength[phoneme];
-			phase2 = outBlendLength[pos];
-		} else if (rank < mem56) {
-            // first phoneme is stronger, so us it's blend lengths
-			phase1 = inBlendLength[pos];
-			phase2 = outBlendLength[pos];
+			phase2 = outBlendLength[next_phoneme];
+		} else if (rank < next_rank) {
+            // next phoneme is stronger, so us its blend lengths
+			phase1 = inBlendLength[next_phoneme];
+			phase2 = outBlendLength[next_phoneme];
 		} else {
-            // second phoneme is stronger, so use it's blend lengths
+            // current phoneme is stronger, so use its blend lengths
             // note the out/in are swapped
 			phase1 = outBlendLength[phoneme];
 			phase2 = inBlendLength[phoneme];
 		}
 
-		mem49 += phonemeLengthOutput[mem44]; 
+		mem49 += phonemeLengthOutput[pos]; 
 
 		unsigned char speedcounter = mem49 + phase2;
-		unsigned table = 168;
-		unsigned char phase3 = mem49 - phase1;
-		unsigned char transition = phase1 + phase2; // total transition?
+		unsigned char phase3       = mem49 - phase1;
+		unsigned char transition   = phase1 + phase2; // total transition?
 		
-		pos = transition;
-		pos -= 2;
-		if ((pos & 128) == 0) {
-            do {
-                // mem47 is used to index the tables:
+		if (((transition - 2) & 128) == 0) {
+            unsigned table = 168;
+            while (table < 175) {
+                // tables:
                 // 168  pitches[]
                 // 169  frequency1
                 // 170  frequency2
@@ -159,64 +173,33 @@ unsigned char CreateTransitions()
                 // 173  amplitude2
                 // 174  amplitude3
                 
-                unsigned char mem40 = transition;
+                // number of frames to interpolate over
+                unsigned char width = transition;
             
+                unsigned char mem53;
                 if (table == 168) {     // pitch
                     // unlike the other values, the pitches[] interpolates from 
                     // the middle of the current phoneme to the middle of the 
                     // next phoneme
                       
-                    // half the width of the current phoneme
-                    unsigned char mem36 = phonemeLengthOutput[mem44] >> 1;
-                    // half the width of the next phoneme
-                    unsigned char mem37 = phonemeLengthOutput[mem44+1] >> 1;
+                    // half the width of the current and next phoneme
+                    unsigned char cur_width  = phonemeLengthOutput[pos] / 2;
+                    unsigned char next_width = phonemeLengthOutput[pos+1] / 2;
                     // sum the values
-                    mem40 = mem36 + mem37; // length of both halves
-                    mem53 = pitches[mem37 + mem49] - pitches[mem49-mem36];
+                    width = cur_width + next_width;
+                    mem53 = pitches[next_width + mem49] - pitches[mem49- cur_width];
                 } else {
-                    // Interpolate <from> - <to>
                     mem53 = Read(table, speedcounter) - Read(table, phase3);
                 }
-			
-                //Code47503(mem40);
-                // ML : Code47503 is division with remainder, and mem50 gets the sign
-			
-                // calculate change per frame
-                unsigned char sign = ((char)(mem53) < 0);
-                unsigned char mem51 = abs((char)mem53) % mem40;
-                mem53 = (unsigned char)((char)(mem53) / mem40);
-
-                // interpolation range
-                pos = mem40;  // number of frames to interpolate over
-                unsigned char frame = phase3; // starting frame
-
-                // linearly interpolate values
-                unsigned char mem56 = 0;
-                while(1) {
-                    unsigned char mem48 = Read(table, frame) + mem53; //carry alway cleared
-                    frame++;
-                    pos--;
-                    if(pos == 0) break;
-                    
-                    mem56 += mem51;
-                    if (mem56 >= mem40) {  //???
-                        mem56 -= mem40; //carry? is set
-                         if (!sign) {
-                            if(mem48 != 0) mem48++;
-                        } else mem48--;
-                    }
-                    Write(table, frame, mem48);
-                } //while No. 3
-
-                
+                interpolate(width, table, phase3, mem53);
                 table++;
-            } while (table != 175);     //while No. 2
+            }
         }
-		pos = ++mem44;
+		++pos;
 	} 
 
     // add the length of this phoneme
-    return mem49 + phonemeLengthOutput[mem44];
+    return mem49 + phonemeLengthOutput[pos];
 }
 
 
