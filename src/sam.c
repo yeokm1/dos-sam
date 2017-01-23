@@ -23,8 +23,6 @@ unsigned char mem49;
 unsigned char mem50;
 unsigned char mem51;
 unsigned char mem53;
-unsigned char mem56;
-
 unsigned char mem59=0;
 
 unsigned char X;
@@ -1076,6 +1074,7 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeind
 
 		// vowel?
 		unsigned char A = flags[index] & 128;
+        unsigned char mem56;
 		if (A != 0)
 		{
             // get next phoneme
