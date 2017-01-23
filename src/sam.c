@@ -198,21 +198,23 @@ void InsertBreath() {
 	unsigned char mem54 = 255;
 	unsigned char mem55 = 0;
 	unsigned char index; //variable Y
-	unsigned char mem66 = 0;
-	while((index = phonemeindex[mem66]) != 255) {
-		mem55 += phonemeLength[mem66];
+
+	unsigned char pos = 0;
+
+	while((index = phonemeindex[pos]) != 255) {
+		mem55 += phonemeLength[pos];
 
 		if (mem55 < 232) {
 			if (index != 254) { // ML : Prevents an index out of bounds problem
                 if((flags2[index]&1) != 0) {
 					mem55 = 0;
-					Insert(mem66+1, 254, mem59, 0);
-					mem66 += 2;
+					Insert(pos+1, 254, mem59, 0);
+					pos += 2;
 					continue;
 				}
 			}
-			if (index == 0) mem54 = mem66;
-			++mem66;
+			if (index == 0) mem54 = pos;
+			++pos;
 			continue;
 		}
 
@@ -221,7 +223,7 @@ void InsertBreath() {
 		stress[mem54] = 0;
 		mem55 = 0;
 		Insert(mem54+1, 254, mem59, 0);
-		mem66 = mem54+2;
+		pos = mem54+2;
 	}
 }
 
