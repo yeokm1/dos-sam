@@ -478,23 +478,16 @@ pos41134:
 }
 
 
-
-
 //change phonemelength depedendent on stress
-//void Code41203()
-void SetPhonemeLength()
-{
+void SetPhonemeLength() {
 	unsigned char A;
 	int position = 0;
 	while(phonemeindex[position] != 255 )
 	{
 		A = stress[position];
-		//41218: BMI 41229
-		if ((A == 0) || ((A&128) != 0))
-		{
+		if ((A == 0) || ((A&128) != 0)) {
 			phonemeLength[position] = phonemeLengthTable[phonemeindex[position]];
-		} else
-		{
+		} else {
 			phonemeLength[position] = phonemeStressedLengthTable[phonemeindex[position]];
 		}
 		position++;
@@ -502,36 +495,26 @@ void SetPhonemeLength()
 }
 
 
-void Code41240()
-{
+void Code41240() {
 	unsigned char pos=0;
 
-	while(phonemeindex[pos] != 255)
-	{
+	while(phonemeindex[pos] != 255) {
 		unsigned char index; //register AC
 		X = pos;
 		index = phonemeindex[pos];
-		if ((flags[index]&2) == 0)
-		{
+		if ((flags[index]&2) == 0) {
 			pos++;
 			continue;
-		} else
-		if ((flags[index]&1) == 0)
-		{
+		} else if ((flags[index]&1) == 0) {
 			Insert(pos+1, index+1, phonemeLengthTable[index+1], stress[pos]);
 			Insert(pos+2, index+2, phonemeLengthTable[index+2], stress[pos]);
 			pos += 3;
 			continue;
 		}
 
-		do
-		{
-			X++;
-			A = phonemeindex[X];
-		} while(A==0);
+        while(!(A = phonemeindex[++X]));
 
-		if (A != 255)
-		{
+		if (A != 255) {
 			if ((flags[A] & 8) != 0)  {pos++; continue;}
 			if ((A == 36) || (A == 37)) {pos++; continue;} // '/H' '/X'
 		}
@@ -539,8 +522,7 @@ void Code41240()
 		Insert(pos+1, index+1, phonemeLengthTable[index+1], stress[pos]);
 		Insert(pos+2, index+2, phonemeLengthTable[index+2], stress[pos]);
 		pos += 3;
-	};
-
+	}
 }
 
 // Rewrites the phonemes using the following rules:
