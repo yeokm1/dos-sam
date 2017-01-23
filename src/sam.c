@@ -174,48 +174,39 @@ int SAMMain()
 }
 
 
-//void Code48547()
-void PrepareOutput()
-{
-	A = 0;
-	X = 0;
-	Y = 0;
 
-	//pos48551:
-	while(1)
-	{
-		A = phonemeindex[X];
-		if (A == 255)
-		{
-			A = 255;
-			phonemeIndexOutput[Y] = 255;
+void PrepareOutput() {
+	unsigned char X = 0; // Position in source
+	unsigned char Y = 0; // Position in output
+
+	while(1) {
+		unsigned char A = phonemeindex[X];
+
+        phonemeIndexOutput[Y] = A;
+
+		if (A == 255) { // End of input
 			Render();
 			return;
 		}
-		if (A == 254)
-		{
-			X++;
-			int temp = X;
-			//mem[48546] = X;
+
+		if (A == 254) {
+			++X;
 			phonemeIndexOutput[Y] = 255;
 			Render();
-			//X = mem[48546];
-			X=temp;
 			Y = 0;
 			continue;
 		}
 
-		if (A == 0)
-		{
-			X++;
+		if (A == 0) {
+			++X;
 			continue;
 		}
 
-		phonemeIndexOutput[Y] = A;
+		phonemeIndexOutput[Y]  = A;
 		phonemeLengthOutput[Y] = phonemeLength[X];
-		stressOutput[Y] = stress[X];
-		X++;
-		Y++;
+		stressOutput[Y]        = stress[X];
+		++X;
+		++Y;
 	}
 }
 
