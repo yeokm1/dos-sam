@@ -515,8 +515,8 @@ void Code41240() {
         while(!(A = phonemeindex[++X]));
 
 		if (A != 255) {
-			if ((flags[A] & 8) != 0)  {pos++; continue;}
-			if ((A == 36) || (A == 37)) {pos++; continue;} // '/H' '/X'
+			if (flags[A] & 8)    { ++pos; continue;}
+			if ((A == 36) || (A == 37)) {++pos; continue;} // '/H' '/X'
 		}
 
 		Insert(pos+1, index+1, phonemeLengthTable[index+1], stress[pos]);
