@@ -210,55 +210,38 @@ void PrepareOutput() {
 	}
 }
 
-//void Code48431()
-void InsertBreath()
-{
-	unsigned char mem54;
-	unsigned char mem55;
-	unsigned char index; //variable Y
-	mem54 = 255;
-	X++;
-	mem55 = 0;
-	unsigned char mem66 = 0;
-	while(1)
-	{
-		//pos48440:
-		X = mem66;
-		index = phonemeindex[X];
-		if (index == 255) return;
-		mem55 += phonemeLength[X];
 
-		if (mem55 < 232)
-		{
-			if (index != 254) // ML : Prevents an index out of bounds problem		
-			{
-				A = flags2[index]&1;
-				if(A != 0)
-				{
-					X++;
+void InsertBreath() {
+	unsigned char mem54 = 255;
+	unsigned char mem55 = 0;
+	unsigned char index; //variable Y
+	unsigned char mem66 = 0;
+	while((index = phonemeindex[mem66]) != 255) {
+		mem55 += phonemeLength[mem66];
+
+		if (mem55 < 232) {
+			if (index != 254) { // ML : Prevents an index out of bounds problem
+                if((flags2[index]&1) != 0) {
 					mem55 = 0;
-					Insert(X, 254, mem59, 0);
-					mem66++;
-					mem66++;
+					Insert(mem66+1, 254, mem59, 0);
+					mem66 += 2;
 					continue;
 				}
 			}
-			if (index == 0) mem54 = X;
-			mem66++;
+			if (index == 0) mem54 = mem66;
+			++mem66;
 			continue;
 		}
-		X = mem54;
-		phonemeindex[X] = 31;   // 'Q*' glottal stop
-		phonemeLength[X] = 4;
-		stress[X] = 0;
-		X++;
-		mem55 = 0;
-		Insert(X, 254, mem59, 0);
-		X++;
-		mem66 = X;
-	}
 
+		phonemeindex[mem54]  = 31;   // 'Q*' glottal stop
+		phonemeLength[mem54] = 4;
+		stress[mem54] = 0;
+		mem55 = 0;
+		Insert(mem54+1, 254, mem59, 0);
+		mem66 = mem54+2;
+	}
 }
+
 
 // Iterates through the phoneme buffer, copying the stress value from
 // the following phoneme under the following circumstance:
