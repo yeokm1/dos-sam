@@ -500,7 +500,7 @@ void Code41240() {
 
 	while(phonemeindex[pos] != 255) {
 		unsigned char index; //register AC
-		X = pos;
+		unsigned char X = pos;
 		index = phonemeindex[pos];
 		if ((flags[index]&2) == 0) {
 			pos++;
