@@ -133,47 +133,30 @@ void Init()
 
 }
 
-
-//int Code39771()
-int SAMMain()
-{
+int SAMMain() {
 	Init();
 	phonemeindex[255] = 32; //to prevent buffer overflow
 
 	if (!Parser1()) return 0;
-	if (debug)
-		PrintPhonemes(phonemeindex, phonemeLength, stress);
+	if (debug) PrintPhonemes(phonemeindex, phonemeLength, stress);
 	Parser2();
 	CopyStress();
 	SetPhonemeLength();
 	AdjustLengths();
 	Code41240();
-	do
-	{
-		A = phonemeindex[X];
-		if (A > 80)
-		{
+	do {
+		if (phonemeindex[X] > 80) {
 			phonemeindex[X] = 255;
 			break; // error: delete all behind it
 		}
-		X++;
-	} while (X != 0);
-
-	//pos39848:
+	} while (++X != 0);
 	InsertBreath();
 
-	//mem[40158] = 255;
-	if (debug) 
-	{
-		PrintPhonemes(phonemeindex, phonemeLength, stress);
-	}
+	if (debug) PrintPhonemes(phonemeindex, phonemeLength, stress);
 
 	PrepareOutput();
-
 	return 1;
 }
-
-
 
 void PrepareOutput() {
 	unsigned char X = 0; // Position in source
