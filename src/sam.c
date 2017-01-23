@@ -242,7 +242,7 @@ void InsertBreath() {
 // to the L that precedes it.
 
 
-//void Code41883()
+
 void CopyStress() {
     // loop thought all the phonemes to be output
 	unsigned char pos=0; //mem66
