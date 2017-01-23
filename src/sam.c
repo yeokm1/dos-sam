@@ -27,7 +27,7 @@ unsigned char mem56;
 
 unsigned char mem59=0;
 
-unsigned char A, X, Y;
+unsigned char X;
 
 unsigned char stress[256]; //numbers from 0 to 8
 unsigned char phonemeLength[256]; //tab40160
@@ -346,9 +346,9 @@ int Parser1()
 	unsigned char sign1;
 	unsigned char sign2;
 	unsigned char position = 0;
-	X = 0;
-	A = 0;
-	Y = 0;
+	unsigned char X = 0;
+	unsigned char A = 0;
+	unsigned char Y = 0;
 
 	// CLEAR THE STRESS TABLE
 	for(i=0; i<256; i++) stress[i] = 0;
@@ -358,34 +358,25 @@ int Parser1()
         // GET THE FIRST CHARACTER FROM THE PHONEME BUFFER
 		sign1 = input[X];
 		// TEST FOR 155 (›) END OF LINE MARKER
-		if (sign1 == 155)
-		{
-           // MARK ENDPOINT AND RETURN
+		if (sign1 == 155) {
 			phonemeindex[position] = 255;      //mark endpoint
-			// REACHED END OF PHONEMES, SO EXIT
-			return 1;       //all ok
+			return 1;  // REACHED END OF PHONEMES, SO EXIT
 		}
-		
+
 		// GET THE NEXT CHARACTER FROM THE BUFFER
-		X++;
-		sign2 = input[X];
-		
+		sign2 = input[++X];
+
 		// NOW sign1 = FIRST CHARACTER OF PHONEME, AND sign2 = SECOND CHARACTER OF PHONEME
 
        // TRY TO MATCH PHONEMES ON TWO TWO-CHARACTER NAME
        // IGNORE PHONEMES IN TABLE ENDING WITH WILDCARDS
-
-       // SET INDEX TO 0
-		Y = 0;
+		Y = 0; // SET INDEX TO 0
 pos41095:
-         
          // GET FIRST CHARACTER AT POSITION Y IN signInputTable
          // --> should change name to PhonemeNameTable1
 		A = signInputTable1[Y];
 		
-		// FIRST CHARACTER MATCHES?
-		if (A == sign1)
-		{
+		if (A == sign1) {
            // GET THE CHARACTER FROM THE PhonemeSecondLetterTable
 			A = signInputTable2[Y];
 			// NOT A SPECIAL AND MATCHES SECOND CHARACTER?
@@ -393,23 +384,20 @@ pos41095:
 			{
                // STORE THE INDEX OF THE PHONEME INTO THE phomeneIndexTable
 				phonemeindex[position] = Y;
-				
-				// ADVANCE THE POINTER TO THE phonemeIndexTable
-				position++;
-				// ADVANCE THE POINTER TO THE phonemeInputBuffer
-				X++;
 
+				// ADVANCE THE POINTER TO THE phonemeIndexTable
+				++position;
+				// ADVANCE THE POINTER TO THE phonemeInputBuffer
+				++X;
 				// CONTINUE PARSING
 				continue;
 			}
 		}
 		
 		// NO MATCH, TRY TO MATCH ON FIRST CHARACTER TO WILDCARD NAMES (ENDING WITH '*')
-		
-		// ADVANCE TO THE NEXT POSITION
-		Y++;
-		// IF NOT END OF TABLE, CONTINUE
-		if (Y != 81) goto pos41095;
+
+		// ADVANCE TO THE NEXT POSITION. IF NOT END OF TABLE, CONTINUE
+		if (++Y != 81) goto pos41095;
 
 // REACHED END OF TABLE WITHOUT AN EXACT (2 CHARACTER) MATCH.
 // THIS TIME, SEARCH FOR A 1 CHARACTER MATCH AGAINST THE WILDCARDS
@@ -497,6 +485,7 @@ void Code41240() {
 			continue;
 		}
 
+        unsigned char A;
         while(!(A = phonemeindex[++X]));
 
 		if (A != 255) {
@@ -549,7 +538,7 @@ void Parser2()
 // SET X TO THE CURRENT POSITION
 		X = pos;
 // GET THE PHONEME AT THE CURRENT POSITION
-		A = phonemeindex[pos];
+		unsigned char A = phonemeindex[pos];
 
 // DEBUG: Print phoneme and index
 		if (debug && A != 255) printf("%d: %c%c\n", X, signInputTable1[A], signInputTable2[A]);
@@ -566,7 +555,7 @@ void Parser2()
 		if (A == 255) return;
 		
 // Copy the current phoneme index to Y
-		Y = A;
+		unsigned char Y = A;
 
 // RULE: 
 //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
@@ -1049,7 +1038,7 @@ pos48644:
 				//if(A == 0) goto pos48688;
 								
                 // get the phoneme length
-				A = phonemeLength[X];
+				unsigned char A = phonemeLength[X];
 
 				// change phoneme length to (length * 1.5) + 1
 				A = (A >> 1) + A + 1;
@@ -1086,7 +1075,7 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeind
 		if (index == 255) return;
 
 		// vowel?
-		A = flags[index] & 128;
+		unsigned char A = flags[index] & 128;
 		if (A != 0)
 		{
             // get next phoneme
