@@ -841,6 +841,17 @@ void Parser2() {
 }
 
 
+void drule_pre(const char *descr, unsigned char X) {
+    if (debug) printf("RULE: %s\n", descr);
+    if (debug) printf("PRE\n");
+    if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
+}
+
+void drule_post(unsigned char X) {
+    if (debug) printf("POST\n");
+    if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+}
+
 // Applies various rules that adjust the lengths of phonemes
 //
 //         Lengthen <FRICATIVE> or <VOICED> between <VOWEL> and <PUNCTUATION> by 1.5
@@ -937,17 +948,9 @@ void AdjustLengths() {
 
 					// next phoneme a consonant?
 					if ((flags[index] & 64) != 0) {
-                        // RULE: <VOWEL> RX | LX <CONSONANT>
-
-                        if (debug) printf("RULE: <VOWEL> <RX | LX> <CONSONANT> - decrease length by 1\n");
-                        if (debug) printf("PRE\n");
-                        if (debug) printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[phonemeindex[loopIndex]], signInputTable2[phonemeindex[loopIndex]], phonemeLength[loopIndex]);
-
-                        // decrease length of vowel by 1 frame
+                        drule_pre("<VOWEL> <RX | LX> <CONSONANT> - decrease length of vowel by 1\n", loopIndex);
     					phonemeLength[loopIndex]--;
-
-                        if (debug) printf("POST\n");
-                        if (debug) printf("phoneme %d (%c%c) length %d\n", loopIndex, signInputTable1[phonemeindex[loopIndex]], signInputTable2[phonemeindex[loopIndex]], phonemeLength[loopIndex]);
+                        drule_post(loopIndex);
                     }
 				}
 				// move ahead
@@ -976,16 +979,10 @@ void AdjustLengths() {
                 // move back
 				--X;
 
-                if (debug) printf("RULE: <VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th\n");
-                if (debug) printf("PRE\n");
-                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
-
-                // decrease length by 1/8th
+                drule_pre("<VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th",X);
 				mem56 = phonemeLength[X] >> 3;
 				phonemeLength[X] -= mem56;
-
-                if (debug) printf("POST\n");
-                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+                drule_post(X);
 
 				loopIndex++;
 				continue;
@@ -994,16 +991,11 @@ void AdjustLengths() {
             // RULE: <VOWEL> <VOICED CONSONANT>
             // <VOWEL> <WH, R*, L*, W*, Y*, M*, N*, NX, DX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX>
 
-            if (debug) printf("RULE: <VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n");
-            if (debug) printf("PRE\n");
-            if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]],  phonemeLength[X-1]);
-
+            drule_pre("<VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n",X-1);
             // decrease length
 			A = phonemeLength[X-1];
 			phonemeLength[X-1] = (A >> 2) + A + 1;     // 5/4*A + 1
-
-            if (debug) printf("POST\n");
-            if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+            drule_post(X);
 
 			loopIndex++;
 			continue;
