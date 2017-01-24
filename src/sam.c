@@ -496,6 +496,15 @@ void Code41240() {
 	}
 }
 
+
+void ChangeRule(unsigned char position, unsigned char rule,unsigned char mem60, unsigned char mem59, unsigned char stress, const char * descr)
+{
+    if (debug) printf("RULE: %s\n",descr);
+    phonemeindex[position] = rule;
+    Insert(position+1, mem60, mem59, stress);
+}
+
+
 // Rewrites the phonemes using the following rules:
 //
 //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
@@ -564,40 +573,26 @@ void Parser2() {
             goto pos41749;
         }
 
-        // RULE:
-        //       UL -> AX L
-        // Example: MEDDLE
-       
 		A = phonemeindex[X];
 
+        // RULE:  UL -> AX L    -- Example: MEDDLE
 		if (A == 78) { // 'UL'
-            if (debug) printf("RULE: UL -> AX L\n");
-            phonemeindex[X] = 13;  // 'AX'
-            Insert(X+1, 24, mem59, stress[X]);
-            pos++;
+            ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");
+            ++pos;
             continue;
         }
 
-        // RULE:
-        //       UM -> AX M
-        // Example: ASTRONOMY
+        // RULE: UM -> AX M     -- Example: ASTRONOMY
 		if (A == 79) { // 'UM'
-            if (debug) printf("RULE: UM -> AX M\n");
-            phonemeindex[X] = 13;  // 'AX'
-            Insert(X+1, 27, mem59, stress[X]);
-            pos++;
+            ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M");
+            ++pos;
             continue;
         }
 
-        // RULE:
-        //       UN -> AX N
-        // Example: FUNCTION
+        // RULE: UN -> AX N     -- Example: FUNCTION
 		if (A == 80) { // 'UN'
-            if (debug) printf("RULE: UN -> AX N\n");
-            phonemeindex[X] = 13;  // AX
-            // Perform insert. Note code below may jump up here with different values
-            Insert(X+1, 28, mem59, stress[X]);
-            pos++;
+            ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N");
+            ++pos;
             continue;
         }
 
@@ -605,38 +600,33 @@ void Parser2() {
         //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
         // EXAMPLE: AWAY EIGHT
 		Y = A;
-		A = flags[A] & 128;  // VOWEL set?
-        // Skip if not a vowel
-		if (A != 0) {
-			A = stress[X];
-			if (A != 0) { // If stressed...
-				A = phonemeindex[++X];
-				if (A == 0) { // If following phoneme is a pause, get next
-					Y = phonemeindex[++X];
-                    // Check for end of buffer flag
-					if (Y == 255) { //buffer overflow
-                        // ??? Not sure about these flags
-     					A = 65&128;
-                    } else {
-                        // And VOWEL flag to current phoneme's flags
-     					A = flags[Y] & 128;
+        if ((flags[A] & 128) && stress[X]) { // VOWEL && stressed
+            A = phonemeindex[++X];
+            if (A == 0) { // If following phoneme is a pause, get next
+                Y = phonemeindex[++X];
+                // Check for end of buffer flag
+                if (Y == 255) { //buffer overflow
+                    // ??? Not sure about these flags
+                    A = 65&128;
+                } else {
+                    // And VOWEL flag to current phoneme's flags
+                    A = flags[Y] & 128;
+                }
+                
+                // If following phonemes is not a pause
+                if (A != 0) {
+                    // If the following phoneme is not stressed
+                    A = stress[X];
+                    if (A != 0) {
+                        // Insert a glottal stop and move forward
+                        if (debug) printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
+                        Insert(X, 31, mem59, 0); // 31 = 'Q'
+                        pos++;
+                        continue;
                     }
-
-                    // If following phonemes is not a pause
-					if (A != 0) {
-                        // If the following phoneme is not stressed
-						A = stress[X];
-						if (A != 0) {
-                            // Insert a glottal stop and move forward
-							if (debug) printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
-							Insert(X, 31, mem59, 0); // 31 = 'Q'
-							pos++;
-							continue;
-						}
-					}
-				}
-			}
-		}
+                }
+            }
+        }
 
         // RULES FOR PHONEMES BEFORE R
         //        T R -> CH R
@@ -670,13 +660,11 @@ void Parser2() {
             // Example: ART
             
             // If vowel flag is set change R to RX
-            A = flags[A] & 128;
-            if (A != 0) {
+            if (flags[A] & 128) {
                 if (debug) printf("RULE: R -> RX\n");
                 phonemeindex[pos] = 18;  // 'RX'
             }
             
-            // continue to next phoneme
             pos++;
             continue;
         }
@@ -717,7 +705,6 @@ void Parser2() {
         // Example: COW
 
 		if (A == 72) {  // 'K'
-            // Get next phoneme
 			Y = phonemeindex[pos+1];
             // If at end, replace current phoneme with KX
 			if (Y == 255) phonemeindex[pos] = 75; // ML : prevents an index out of bounds problem
@@ -774,7 +761,7 @@ void Parser2() {
             continue;
         }
 
-pos41749:
+    pos41749:
         // RULE:
         //      <ALVEOLAR> UW -> <ALVEOLAR> UX
         //
@@ -864,11 +851,7 @@ pos41749:
 //         <VOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1
 //         <LIQUID CONSONANT> <DIPTHONG> - decrease by 2
 
-
-//void Code48619()
-void AdjustLengths()
-{
-
+void AdjustLengths() {
     // LENGTHEN VOWELS PRECEDING PUNCTUATION
     //
     // Search for punctuation. If found, back up to the first vowel, then
