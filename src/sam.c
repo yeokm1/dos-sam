@@ -549,8 +549,6 @@ void Parser2() {
 
 		if (A == 255) return;
 
-		unsigned char Y = A; // Copy the current phoneme index to Y
-
         // RULE: 
         //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
         //       <DIPTHONG NOT ENDING WITH WX> -> <DIPTHONG NOT ENDING WITH WX> YX
@@ -558,7 +556,7 @@ void Parser2() {
 
         // Check for DIPTHONG
 		if ((flags[A] & 16) != 0) { // Not a dipthong.
-            A = flags[Y] & 32; // End in IY sound?
+            A = flags[A] & 32; // End in IY sound?
 
             // If ends with IY, use YX, else use WX
             if (A == 0) A = 20; else A = 21;    // 'WX' = 20 'YX' = 21
@@ -599,11 +597,11 @@ void Parser2() {
         // RULE:
         //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
         // EXAMPLE: AWAY EIGHT
-		Y = A;
+
         if ((flags[A] & 128) && stress[X]) { // VOWEL && stressed
             A = phonemeindex[++X];
             if (A == 0) { // If following phoneme is a pause, get next
-                Y = phonemeindex[++X];
+                unsigned char Y = phonemeindex[++X];
                 // Check for end of buffer flag
                 if (Y == 255) { //buffer overflow
                     // ??? Not sure about these flags
@@ -635,12 +633,15 @@ void Parser2() {
         // Get current position and phoneme
 		X = pos;
 		A = phonemeindex[pos];
+        
+        unsigned char prior = phonemeindex[pos-1];
+
 		if (A == 23) { // 'R'
             // Look at prior phoneme
             X--;
-            A = phonemeindex[pos-1];
+            A = prior;
             
-            if (A == 69) { // 'T'
+            if (prior == 69) { // 'T'
                 if (debug) printf("RULE: T R -> CH R\n");
                 phonemeindex[pos-1] = 42;
                 goto pos41779;
@@ -649,7 +650,7 @@ void Parser2() {
             // RULES FOR PHONEMES BEFORE R
             //        D R -> J R
             // Example: DRY
-            if (A == 57) { // 'D'
+            if (prior == 57) { // 'D'
                 if (debug) printf("RULE: D R -> J R\n");
                 phonemeindex[pos-1] = 44;
                 goto pos41788;
@@ -660,25 +661,21 @@ void Parser2() {
             // Example: ART
             
             // If vowel flag is set change R to RX
-            if (flags[A] & 128) {
+            if (flags[prior] & 128) {
                 if (debug) printf("RULE: R -> RX\n");
                 phonemeindex[pos] = 18;  // 'RX'
             }
             
-            pos++;
+            ++pos;
             continue;
         }
 
-        // RULE:
-        //       <VOWEL> L -> <VOWEL> LX
-        // Example: ALL
-        // Is phoneme L?
+        // RULE: <VOWEL> L -> <VOWEL> LX   -- Example: ALL
 		if (A == 24) { // 'L'
-            // If prior phoneme does not have VOWEL flag set, move to next phoneme
-			if ((flags[phonemeindex[pos-1]] & 128) == 0) {pos++; continue;}
-            // Prior phoneme has VOWEL flag set, so change L to LX and move to next phoneme
-			if (debug) printf("RULE: <VOWEL> L -> <VOWEL> LX\n");
-			phonemeindex[X] = 19;     // 'LX'
+			if (flags[prior] & 128) { // VOWEL flag set, so change L to LX
+                if (debug) printf("RULE: <VOWEL> L -> <VOWEL> LX\n");
+                phonemeindex[X] = 19;     // 'LX'
+            }
 			pos++;
 			continue;
 		}
@@ -691,11 +688,11 @@ void Parser2() {
         //       2. Reciter already replaces GS -> GZ
         
 		if (A == 32) { // 'S'
-            // If prior phoneme is not G, move to next phoneme
-			if (phonemeindex[pos-1] != 60) {pos++; continue;}
-            // Replace S with Z and move on
-			if (debug) printf("RULE: G S -> G Z\n");
-			phonemeindex[pos] = 38;    // 'Z'
+			if (prior == 60) { // prior is G
+                // Replace S with Z and move on
+                if (debug) printf("RULE: G S -> G Z\n");
+                phonemeindex[pos] = 38;    // 'Z'
+            }
 			pos++;
 			continue;
 		}
@@ -705,7 +702,7 @@ void Parser2() {
         // Example: COW
 
 		if (A == 72) {  // 'K'
-			Y = phonemeindex[pos+1];
+			unsigned char Y = phonemeindex[pos+1];
             // If at end, replace current phoneme with KX
 			if (Y == 255) phonemeindex[pos] = 75; // ML : prevents an index out of bounds problem
 			else {
@@ -717,7 +714,6 @@ void Parser2() {
 			}
 		}
 		else
-
             // RULE:
             //             G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
             // Example: GO
@@ -745,20 +741,21 @@ void Parser2() {
         //      S KX -> S GX
         // Examples: SPY, STY, SKY, SCOWL
 
-		Y = phonemeindex[pos];
+		unsigned char Y = phonemeindex[pos];
         // Replace with softer version?
 		A = flags[Y] & 1;
 		if (A) {
-            A = phonemeindex[pos-1];
-            if (A != 32) {   // 'S'
+            A = prior;
+            if (A == 32) {   // 'S'
+                // Replace with softer version
+                if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
+                phonemeindex[pos] = Y-12;
+                pos++;
+                continue;
+            } else {
                 A = Y;
                 goto pos41812;
             }
-            // Replace with softer version
-            if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
-            phonemeindex[pos] = Y-12;
-            pos++;
-            continue;
         }
 
     pos41749:
@@ -808,35 +805,33 @@ void Parser2() {
         //       <UNSTRESSED VOWEL> D <PAUSE>  -> <UNSTRESSED VOWEL> DX <PAUSE>
         // Example: PARTY, TARDY
 
-        // Past this point, only process if phoneme is T or D
-		if (A != 69)    // 'T'
-            if (A != 57) {pos++; continue;}       // 'D'
+		if (A == 69 || A == 57) { // 'T', 'D'
 
-        // If prior phoneme is not a vowel, continue processing phonemes
-		if ((flags[phonemeindex[X-1]] & 128) == 0) {pos++; continue;}
-
-		A = phonemeindex[++X];
-		if (A != 0) {
-            // If next phoneme is not a pause, continue processing phonemes
-			if ((flags[A] & 128) == 0) {pos++; continue;}
-            // If next phoneme is stressed, continue processing phonemes
-            // FIXME: How does a pause get stressed?
-			if (stress[X] != 0) {pos++; continue;}
-
-            // Set phonemes to DX
-            if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
-            phonemeindex[pos] = 30;       // 'DX'
-		} else {
-			A = phonemeindex[X+1];
-			if (A == 255) //prevent buffer overflow
-				A = 65 & 128;
-			else
-                // Is next phoneme a vowel or ER?
-				A = flags[A] & 128;
-			if (debug) if (A != 0) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
-			if (A != 0) phonemeindex[pos] = 30;  // 'DX'
-		}
-		pos++;
+            // If prior phoneme is not a vowel, continue processing phonemes
+            if (flags[phonemeindex[X-1]] & 128) {
+                if ((A = phonemeindex[++X])) {
+                    if (flags[A] & 128) { // pause
+                        // FIXME: How does a pause get stressed?
+                        if (stress[X] == 0) { // unstressed
+                            // Set phonemes to DX
+                            if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+                            phonemeindex[pos] = 30;       // 'DX'
+                        }
+                    }
+                } else {
+                    A = phonemeindex[X+1];
+                    if (A == 255) //prevent buffer overflow
+                        A = 65 & 128;
+                    else
+                        // Is next phoneme a vowel or ER?
+                        if (flags[A] & 128) {
+                            if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+                            if (A != 0) phonemeindex[pos] = 30;  // 'DX'
+                        }
+                }
+            }
+        }
+        pos++;
 	} // while
 }
 
