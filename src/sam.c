@@ -504,6 +504,21 @@ void ChangeRule(unsigned char position, unsigned char rule,unsigned char mem60, 
     Insert(position+1, mem60, mem59, stress);
 }
 
+void drule(const char * str) {
+    if (debug) printf("RULE: %s\n",str);
+}
+
+void drule_pre(const char *descr, unsigned char X) {
+    if (debug) printf("RULE: %s\n", descr);
+    if (debug) printf("PRE\n");
+    if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
+}
+
+void drule_post(unsigned char X) {
+    if (debug) printf("POST\n");
+    if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+}
+
 
 // Rewrites the phonemes using the following rules:
 //
@@ -595,17 +610,13 @@ void Parser2() {
                     A = flags[Y] & 128;
                 }
                 
-                // If following phonemes is not a pause
-                if (A != 0) {
-                    // If the following phoneme is not stressed
-                    A = stress[X];
-                    if (A != 0) {
-                        // Insert a glottal stop and move forward
-                        if (debug) printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
-                        Insert(X, 31, mem59, 0); // 31 = 'Q'
-                        pos++;
-                        continue;
-                    }
+                
+                if (A && stress[X]) { // If following phonemes is not a pause, and is not stressed
+                    // Insert a glottal stop and move forward
+                    if (debug) printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
+                    Insert(X, 31, mem59, 0); // 31 = 'Q'
+                    pos++;
+                    continue;
                 }
             }
         }
@@ -790,21 +801,6 @@ void Parser2() {
         }
         pos++;
 	} // while
-}
-
-void drule(const char * str) {
-    if (debug) printf("RULE: %s\n",str);
-}
-
-void drule_pre(const char *descr, unsigned char X) {
-    if (debug) printf("RULE: %s\n", descr);
-    if (debug) printf("PRE\n");
-    if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
-}
-
-void drule_post(unsigned char X) {
-    if (debug) printf("POST\n");
-    if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
 }
 
 // Applies various rules that adjust the lengths of phonemes
