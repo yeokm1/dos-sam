@@ -563,9 +563,8 @@ void Parser2() {
             A = (pf & 32) ? 21 : 20; // 'WX' = 20 'YX' = 21
             
             // Insert at WX or YX following, copying the stress
-            
-            if (debug) if (A==20) printf("RULE: insert WX following dipthong NOT ending in IY sound\n");
-            if (debug) if (A==21) printf("RULE: insert YX following dipthong ending in IY sound\n");
+            if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
+            if (A==21) drule("insert YX following dipthong ending in IY sound");
             Insert(pos+1, A, mem59, stress[pos]);
             X = pos;
 
@@ -585,8 +584,7 @@ void Parser2() {
         // EXAMPLE: AWAY EIGHT
 
         if ((pf & 128) && stress[X]) { // VOWEL && stressed
-            A = phonemeindex[++X];
-            if (A == 0) { // If following phoneme is a pause, get next
+            if (!phonemeindex[++X]) { // If following phoneme is a pause, get next
                 unsigned char Y = phonemeindex[++X];
                 // Check for end of buffer flag
                 if (Y == 255) { //buffer overflow
@@ -628,14 +626,14 @@ void Parser2() {
             if (prior == 69) { // 'T'
                 drule("T R -> CH R");
                 phonemeindex[pos-1] = 42;
-                goto pos41779;
+                goto pos41812;
             }
             
             // Example: DRY
             if (prior == 57) { // 'D'
                 drule("D R -> J R");
                 phonemeindex[pos-1] = 44;
-                goto pos41788;
+                goto pos41812;
             }
             
             // Example: ART
@@ -727,35 +725,31 @@ void Parser2() {
         //
         // Example: NEW, DEW, SUE, ZOO, THOO, TOO
 		A = phonemeindex[X];
-		if (A == 53) { // 'UW'
-            // ALVEOLAR flag set?
-			A = flags2[phonemeindex[X-1]] & 4;
-			if (A) {
-                if (debug) printf("RULE: <ALVEOLAR> UW -> <ALVEOLAR> UX\n");
-                phonemeindex[X] = 16;
+        if (A == 53 || A == 42 || A == 44) {
+            if (A == 53) { // 'UW'
+                // ALVEOLAR flag set?
+                A = flags2[phonemeindex[X-1]] & 4;
+                if (A) {
+                    if (debug) printf("RULE: <ALVEOLAR> UW -> <ALVEOLAR> UX\n");
+                    phonemeindex[X] = 16;
+                }
             }
-			++pos;
-			continue;
-		}
 
-    pos41779:
-        // RULE:
-        //       CH -> CH CH' (CH requires two phonemes to represent it)
-        // Example: CHEW
-		if (A == 42) {   // 'CH'
-			if (debug) printf("CH -> CH CH+1\n");
-			Insert(X+1, 43, mem59, stress[X]);
-			pos++;
-			continue;
-		}
+            // RULE:
+            //       CH -> CH CH' (CH requires two phonemes to represent it)
+            // Example: CHEW
+            if (A == 42) {   // 'CH'
+                if (debug) printf("CH -> CH CH+1\n");
+                Insert(X+1, 43, mem59, stress[X]);
+            }
 
-    pos41788:
-        // RULE:
-        //       J -> J J' (J requires two phonemes to represent it)
-        // Example: JAY
-		if (A == 44) { // 'J'
-			if (debug) printf("J -> J J+1\n");
-			Insert(X+1, 45, mem59, stress[X]);
+            // RULE:
+            //       J -> J J' (J requires two phonemes to represent it)
+            // Example: JAY
+            if (A == 44) { // 'J'
+                if (debug) printf("J -> J J+1\n");
+                Insert(X+1, 45, mem59, stress[X]);
+            }
 			pos++;
 			continue;
 		}
