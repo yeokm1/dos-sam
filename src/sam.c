@@ -1031,27 +1031,21 @@ void AdjustLengths() {
             if (A != 0) {
                // B*, D*, G*, GX, P*, T*, K*, KX
 
-if (debug) printf("RULE: <NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+                if (debug) printf("RULE: <NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
+                if (debug) printf("POST\n");
+                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+                if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
 
-                // set stop consonant length to 6
-                phonemeLength[X] = 6;
-                
-                // set nasal length to 5
-                phonemeLength[X-1] = 5;
-                
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+                phonemeLength[X]   = 6; // set stop consonant length to 6
+                phonemeLength[X-1] = 5; // set nasal length to 5
 
+                if (debug) printf("POST\n");
+                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+                if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
             }
-            // move to next phoneme
             loopIndex++;
             continue;
         }
-
 
         // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
 
@@ -1059,18 +1053,11 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemei
         //       Shorten both to (length/2 + 1)
 
         // (voiced) stop consonant?
-        if((flags[index] & 2) != 0)
-        {                         
+        if((flags[index] & 2) != 0) {
             // B*, D*, G*, GX
-                         
-            // move past silence
-            do
-            {
-                // move ahead
-                X++;
-                index = phonemeindex[X];
-            } while(index == 0);
 
+            // move past silence
+            while ((index = phonemeindex[++X]) == 0);
 
             // check for end of buffer
             if (index == 255) //buffer overflow
@@ -1084,12 +1071,12 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemei
             }
 
             // RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
-if (debug) printf("RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
-// X gets overwritten, so hold prior X value for debug statement
-int debugX = X;
+            if (debug) printf("RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1\n");
+            if (debug) printf("PRE\n");
+            if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+            if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+            // X gets overwritten, so hold prior X value for debug statement
+            int debugX = X;
             // shorten the prior phoneme length to (length/2 + 1)
             phonemeLength[X] = (phonemeLength[X] >> 1) + 1;
             X = loopIndex;
@@ -1097,33 +1084,30 @@ int debugX = X;
             // also shorten this phoneme length to (length/2 +1)
             phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", debugX, signInputTable1[phonemeindex[debugX]], signInputTable2[phonemeindex[debugX]], phonemeLength[debugX]);
-if (debug) printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[phonemeindex[debugX-1]], signInputTable2[phonemeindex[debugX-1]], phonemeLength[debugX-1]);
+            if (debug) printf("POST\n");
+            if (debug) printf("phoneme %d (%c%c) length %d\n", debugX, signInputTable1[phonemeindex[debugX]], signInputTable2[phonemeindex[debugX]], phonemeLength[debugX]);
+            if (debug) printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[phonemeindex[debugX-1]], signInputTable2[phonemeindex[debugX-1]], phonemeLength[debugX-1]);
 
-
-            // move ahead
             loopIndex++;
             continue;
         }
-
-
         // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
 
         // RULE: <VOICED NON-VOWEL> <DIPTHONG>
         //       Decrease <DIPTHONG> by 2
 
         // liquic consonant?
-        if ((flags2[index] & 16) != 0)
-        {
+        if ((flags2[index] & 16) != 0) {
             // R*, L*, W*, Y*
                            
             // get the prior phoneme
             index = phonemeindex[X-1];
 
+
+            // FIXME: The debug code here breaks the rule.
             // prior phoneme a stop consonant>
-            if((flags[index] & 2) != 0)
-                             // Rule: <LIQUID CONSONANT> <DIPTHONG>
+            if((flags[index] & 2) != 0) 
+                // Rule: <LIQUID CONSONANT> <DIPTHONG>
 
 if (debug) printf("RULE: <LIQUID CONSONANT> <DIPTHONG> - decrease by 2\n");
 if (debug) printf("PRE\n");
