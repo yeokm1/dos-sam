@@ -713,26 +713,23 @@ void Parser2() {
 				if (A == 0) phonemeindex[pos] = 75;  // 'KX'
 			}
 		}
-		else
+		else if (A == 60) { // 'G'
             // RULE:
             //             G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
             // Example: GO
 
-            // Is character a G?
-            if (A == 60) { // 'G'
-                // Get the following character
-                unsigned char index = phonemeindex[pos+1];
-
-                if (index == 255) { pos++; continue; }
-                else
-                    // If dipthong ending with YX, move continue processing next phoneme
-                    if ((flags[index] & 32) != 0) {pos++; continue;}
+            // Get the following character
+            unsigned char index = phonemeindex[pos+1];
+            
+            // If dipthong ending with YX, move continue processing next phoneme
+            if ((index != 255) && ((flags[index] & 32) == 0)) {
                 // replace G with GX and continue processing next phoneme
                 if (debug) printf("RULE: G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
                 phonemeindex[pos] = 63; // 'GX'
-                pos++;
-                continue;
             }
+            pos++;
+            continue;
+        }
 
         // RULE:
         //      S P -> S B
