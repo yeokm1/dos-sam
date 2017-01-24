@@ -537,17 +537,20 @@ void Parser2() {
     // Loop through phonemes
 	while(1) {
 		X = pos;
-		unsigned char A = phonemeindex[pos];
+		unsigned char p = phonemeindex[pos];
+        unsigned char A = p;
 
         // DEBUG: Print phoneme and index
-		if (debug && A != 255) printf("%d: %c%c\n", X, signInputTable1[A], signInputTable2[A]);
+		if (debug && p != 255) printf("%d: %c%c\n", X, signInputTable1[p], signInputTable2[p]);
 
-		if (A == 0) { // Is phoneme pause?
+		if (p == 0) { // Is phoneme pause?
 			++pos;
 			continue;
 		}
 
-		if (A == 255) return;
+		if (p == 255) return;
+
+        unsigned char pf = flags[p];
 
         // RULE: 
         //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
@@ -555,11 +558,9 @@ void Parser2() {
         // Example: OIL, COW
 
         // Check for DIPTHONG
-		if ((flags[A] & 16) != 0) { // Not a dipthong.
-            A = flags[A] & 32; // End in IY sound?
-
+		if ((pf & 16) != 0) { // Not a dipthong.
             // If ends with IY, use YX, else use WX
-            if (A == 0) A = 20; else A = 21;    // 'WX' = 20 'YX' = 21
+            A = (pf & 32) ? 21 : 20; // 'WX' = 20 'YX' = 21
             
             // Insert at WX or YX following, copying the stress
             
@@ -571,25 +572,10 @@ void Parser2() {
             goto pos41749;
         }
 
-		A = phonemeindex[X];
-
-        // RULE:  UL -> AX L    -- Example: MEDDLE
-		if (A == 78) { // 'UL'
-            ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");
-            ++pos;
-            continue;
-        }
-
-        // RULE: UM -> AX M     -- Example: ASTRONOMY
-		if (A == 79) { // 'UM'
-            ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M");
-            ++pos;
-            continue;
-        }
-
-        // RULE: UN -> AX N     -- Example: FUNCTION
-		if (A == 80) { // 'UN'
-            ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N");
+        if (p == 78 || p == 79 || p == 80) {
+            if (p == 78) ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");       // Example: MEDDLE
+            else if (p == 79) ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M"); // Example: ASTRONOMY
+            else if (p == 80) ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N"); // Example: FUNCTION
             ++pos;
             continue;
         }
@@ -598,7 +584,7 @@ void Parser2() {
         //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
         // EXAMPLE: AWAY EIGHT
 
-        if ((flags[A] & 128) && stress[X]) { // VOWEL && stressed
+        if ((pf & 128) && stress[X]) { // VOWEL && stressed
             A = phonemeindex[++X];
             if (A == 0) { // If following phoneme is a pause, get next
                 unsigned char Y = phonemeindex[++X];
@@ -626,43 +612,35 @@ void Parser2() {
             }
         }
 
-        // RULES FOR PHONEMES BEFORE R
-        //        T R -> CH R
-        // Example: TRACK
-
         // Get current position and phoneme
 		X = pos;
-		A = phonemeindex[pos];
+		A = p;
         
         unsigned char prior = phonemeindex[pos-1];
 
-		if (A == 23) { // 'R'
+		if (p == 23) { // 'R'
+            // RULES FOR PHONEMES BEFORE R
             // Look at prior phoneme
             X--;
             A = prior;
-            
+
+            // Example: TRACK
             if (prior == 69) { // 'T'
-                if (debug) printf("RULE: T R -> CH R\n");
+                drule("T R -> CH R");
                 phonemeindex[pos-1] = 42;
                 goto pos41779;
             }
             
-            // RULES FOR PHONEMES BEFORE R
-            //        D R -> J R
             // Example: DRY
             if (prior == 57) { // 'D'
-                if (debug) printf("RULE: D R -> J R\n");
+                drule("D R -> J R");
                 phonemeindex[pos-1] = 44;
                 goto pos41788;
             }
             
-            // RULES FOR PHONEMES BEFORE R
-            //        <VOWEL> R -> <VOWEL> RX
             // Example: ART
-            
-            // If vowel flag is set change R to RX
             if (flags[prior] & 128) {
-                if (debug) printf("RULE: R -> RX\n");
+                drule("<VOWEL> R -> <VOWEL> RX");
                 phonemeindex[pos] = 18;  // 'RX'
             }
             
@@ -670,34 +648,41 @@ void Parser2() {
             continue;
         }
 
-        // RULE: <VOWEL> L -> <VOWEL> LX   -- Example: ALL
-		if (A == 24) { // 'L'
-			if (flags[prior] & 128) { // VOWEL flag set, so change L to LX
-                if (debug) printf("RULE: <VOWEL> L -> <VOWEL> LX\n");
+        if (p == 24 || p == 32 || A == 60) {
+            // Example: ALL
+            if (p == 24 && (flags[prior] & 128)) { // 'L' + prior has VOWEL flag set
+                drule("<VOWEL> L -> <VOWEL> LX");
                 phonemeindex[X] = 19;     // 'LX'
             }
-			pos++;
-			continue;
-		}
-		
-        // RULE:
-        //       G S -> G Z
-        //
-        // Can't get to fire -
-        //       1. The G -> GX rule intervenes
-        //       2. Reciter already replaces GS -> GZ
-        
-		if (A == 32) { // 'S'
-			if (prior == 60) { // prior is G
-                // Replace S with Z and move on
-                if (debug) printf("RULE: G S -> G Z\n");
+
+            // G S -> G Z
+            // Can't get to fire -
+            //       1. The G -> GX rule intervenes
+            //       2. Reciter already replaces GS -> GZ
+            if (prior == 60 && p == 32) { // 'G' 'S'
+                drule("G S -> G Z");
                 phonemeindex[pos] = 38;    // 'Z'
             }
-			pos++;
-			continue;
-		}
 
-        // RULE:
+            if (p == 60) { // 'G'
+                // G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
+                // Example: GO
+
+                unsigned char index = phonemeindex[pos+1];
+            
+                // If dipthong ending with YX, move continue processing next phoneme
+                if ((index != 255) && ((flags[index] & 32) == 0)) {
+                    // replace G with GX and continue processing next phoneme
+                    if (debug) printf("RULE: G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
+                    phonemeindex[pos] = 63; // 'GX'
+                }
+            }
+
+            pos++;
+            continue;
+		}
+		
+
         //             K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
         // Example: COW
 
@@ -713,23 +698,6 @@ void Parser2() {
 				if (A == 0) phonemeindex[pos] = 75;  // 'KX'
 			}
 		}
-		else if (A == 60) { // 'G'
-            // RULE:
-            //             G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
-            // Example: GO
-
-            // Get the following character
-            unsigned char index = phonemeindex[pos+1];
-            
-            // If dipthong ending with YX, move continue processing next phoneme
-            if ((index != 255) && ((flags[index] & 32) == 0)) {
-                // replace G with GX and continue processing next phoneme
-                if (debug) printf("RULE: G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
-                phonemeindex[pos] = 63; // 'GX'
-            }
-            pos++;
-            continue;
-        }
 
         // RULE:
         //      S P -> S B
@@ -740,19 +708,17 @@ void Parser2() {
 
 		unsigned char Y = phonemeindex[pos];
         // Replace with softer version?
-		A = flags[Y] & 1;
-		if (A) {
-            A = prior;
-            if (A == 32) {   // 'S'
-                // Replace with softer version
-                if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
-                phonemeindex[pos] = Y-12;
-                pos++;
-                continue;
-            } else {
-                A = Y;
-                goto pos41812;
-            }
+		if ((flags[Y] & 1) && (prior == 32)) { // 'S'
+            // Replace with softer version
+            if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
+            phonemeindex[pos] = Y-12;
+            pos++;
+            continue;
+        } 
+
+        if ((flags[Y] & 1)) {
+            A = Y;
+            goto pos41812;
         }
 
     pos41749:
@@ -778,7 +744,7 @@ void Parser2() {
         // Example: CHEW
 		if (A == 42) {   // 'CH'
 			if (debug) printf("CH -> CH CH+1\n");
-			Insert(X+1, A+1, mem59, stress[X]);
+			Insert(X+1, 43, mem59, stress[X]);
 			pos++;
 			continue;
 		}
@@ -789,7 +755,7 @@ void Parser2() {
         // Example: JAY
 		if (A == 44) { // 'J'
 			if (debug) printf("J -> J J+1\n");
-			Insert(X+1, A+1, mem59, stress[X]);
+			Insert(X+1, 45, mem59, stress[X]);
 			pos++;
 			continue;
 		}
@@ -832,6 +798,9 @@ void Parser2() {
 	} // while
 }
 
+void drule(const char * str) {
+    if (debug) printf("RULE: %s\n",str);
+}
 
 void drule_pre(const char *descr, unsigned char X) {
     if (debug) printf("RULE: %s\n", descr);
