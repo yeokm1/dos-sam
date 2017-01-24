@@ -959,9 +959,7 @@ void AdjustLengths() {
 			// Got here if not <VOWEL>
 
             // not voiced
-			if ((mem56 & 4) == 0)
-			{
-                       
+			if ((mem56 & 4) == 0) {
                  // Unvoiced 
                  // *, .*, ?*, ,*, -*, DX, S*, SH, F*, TH, /H, /X, CH, P*, T*, K*, KX
                  
@@ -972,27 +970,23 @@ void AdjustLengths() {
                     continue;
                 }
 
-                // P*, T*, K*, KX
-
-                
                 // RULE: <VOWEL> <UNVOICED PLOSIVE>
                 // <VOWEL> <P*, T*, K*, KX>
-                
+
                 // move back
-				X--;
-				
-if (debug) printf("RULE: <VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
+				--X;
+
+                if (debug) printf("RULE: <VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th\n");
+                if (debug) printf("PRE\n");
+                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
 
                 // decrease length by 1/8th
 				mem56 = phonemeLength[X] >> 3;
 				phonemeLength[X] -= mem56;
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
+                if (debug) printf("POST\n");
+                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
 
-                // move ahead
 				loopIndex++;
 				continue;
 			}
@@ -1000,41 +994,32 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeind
             // RULE: <VOWEL> <VOICED CONSONANT>
             // <VOWEL> <WH, R*, L*, W*, Y*, M*, N*, NX, DX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX>
 
-if (debug) printf("RULE: <VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n");
-if (debug) printf("PRE\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]],  phonemeLength[X-1]);
+            if (debug) printf("RULE: <VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n");
+            if (debug) printf("PRE\n");
+            if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]],  phonemeLength[X-1]);
 
             // decrease length
 			A = phonemeLength[X-1];
 			phonemeLength[X-1] = (A >> 2) + A + 1;     // 5/4*A + 1
 
-if (debug) printf("POST\n");
-if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
+            if (debug) printf("POST\n");
+            if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
 
-            // move ahead
 			loopIndex++;
 			continue;
-			
 		}
 
-
         // WH, R*, L*, W*, Y*, M*, N*, NX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
-
-//pos48821:
-           
+        
         // RULE: <NASAL> <STOP CONSONANT>
         //       Set punctuation length to 6
         //       Set stop consonant length to 5
            
         // nasal?
-        if((flags2[index] & 8) != 0)
-        {
-                          
+        if((flags2[index] & 8) != 0) {
             // M*, N*, NX, 
 
-            // get the next phoneme
-            X++;
-            index = phonemeindex[X];
+            index = phonemeindex[++X];
 
             // end of buffer?
             if (index == 255)
@@ -1042,13 +1027,10 @@ if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemei
             else
                 A = flags[index] & 2; // check for stop consonant
 
-
             // is next phoneme a stop consonant?
-            if (A != 0)
-            
+            if (A != 0) {
                // B*, D*, G*, GX, P*, T*, K*, KX
 
-            {
 if (debug) printf("RULE: <NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
 if (debug) printf("POST\n");
 if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
