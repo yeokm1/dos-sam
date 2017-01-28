@@ -271,6 +271,35 @@ void Insert(unsigned char position/*var57*/, unsigned char mem60, unsigned char 
 	return;
 }
 
+
+signed int full_match(unsigned char sign1, unsigned char sign2) {
+    unsigned char Y = 0;
+    do {
+        // GET FIRST CHARACTER AT POSITION Y IN signInputTable
+        // --> should change name to PhonemeNameTable1
+        unsigned char A = signInputTable1[Y];
+        
+        if (A == sign1) {
+            A = signInputTable2[Y];
+            // NOT A SPECIAL AND MATCHES SECOND CHARACTER?
+            if ((A != '*') && (A == sign2)) return Y;
+        }
+    } while (++Y != 81);
+    return -1;
+}
+
+signed int wild_match(unsigned char sign1, unsigned char sign2) {
+    signed int Y = 0;
+    do {
+		if (signInputTable2[Y] == '*') {
+			if (signInputTable1[Y] == sign1) return Y;
+		}
+	} while (++Y != 81);
+    return -1;
+}
+
+
+
 // The input[] buffer contains a string of phonemes and stress markers along
 // the lines of:
 //
@@ -328,108 +357,34 @@ int Parser1()
 	unsigned char sign1;
 	unsigned char sign2;
 	unsigned char position = 0;
-	unsigned char X = 0;
-	unsigned char A = 0;
-	unsigned char Y = 0;
+	unsigned char srcpos   = 0;
 
-	// CLEAR THE STRESS TABLE
-	for(i=0; i<256; i++) stress[i] = 0;
+	for(i=0; i<256; i++) stress[i] = 0; // Clear the stress table.
 
-    // THIS CODE MATCHES THE PHONEME LETTERS TO THE TABLE
-	while(1) {
-        // GET THE FIRST CHARACTER FROM THE PHONEME BUFFER
-		sign1 = input[X];
-		// TEST FOR 155 (›) END OF LINE MARKER
-		if (sign1 == 155) {
-			phonemeindex[position] = 255;      //mark endpoint
-			return 1;  // REACHED END OF PHONEMES, SO EXIT
-		}
+	while((sign1 = input[srcpos]) != 155) { // 155 (\233) is end of line marker
+		sign2 = input[++srcpos];
+		signed int match = 0;
+        if ((match = full_match(sign1, sign2)) != -1) {
+            // Matched both characters (no wildcards)
+            phonemeindex[position++] = (unsigned char)match;
+            ++srcpos; // Skip the second character of the input as we've matched it
+        } else if ((match=wild_match(sign1,sign2)) != -1) {
+            // Matched just the first character (with second character matching '*'
+            phonemeindex[position++] = (unsigned char)match;
+        } else {
+            // Should be a stress character. Search through the
+            // stress table backwards.
+            match = 8; // End of stress table. FIXME: Don't hardcode.
+            while( (sign1 != stressInputTable[match]) && (match>0)) --match;
+            
+            if (match == 0) return 0; // failure
 
-		// GET THE NEXT CHARACTER FROM THE BUFFER
-		sign2 = input[++X];
-
-		// NOW sign1 = FIRST CHARACTER OF PHONEME, AND sign2 = SECOND CHARACTER OF PHONEME
-
-       // TRY TO MATCH PHONEMES ON TWO TWO-CHARACTER NAME
-       // IGNORE PHONEMES IN TABLE ENDING WITH WILDCARDS
-		Y = 0; // SET INDEX TO 0
-pos41095:
-         // GET FIRST CHARACTER AT POSITION Y IN signInputTable
-         // --> should change name to PhonemeNameTable1
-		A = signInputTable1[Y];
-		
-		if (A == sign1) {
-           // GET THE CHARACTER FROM THE PhonemeSecondLetterTable
-			A = signInputTable2[Y];
-			// NOT A SPECIAL AND MATCHES SECOND CHARACTER?
-			if ((A != '*') && (A == sign2))
-			{
-               // STORE THE INDEX OF THE PHONEME INTO THE phomeneIndexTable
-				phonemeindex[position] = Y;
-
-				// ADVANCE THE POINTER TO THE phonemeIndexTable
-				++position;
-				// ADVANCE THE POINTER TO THE phonemeInputBuffer
-				++X;
-				// CONTINUE PARSING
-				continue;
-			}
-		}
-		
-		// NO MATCH, TRY TO MATCH ON FIRST CHARACTER TO WILDCARD NAMES (ENDING WITH '*')
-
-		// ADVANCE TO THE NEXT POSITION. IF NOT END OF TABLE, CONTINUE
-		if (++Y != 81) goto pos41095;
-
-// REACHED END OF TABLE WITHOUT AN EXACT (2 CHARACTER) MATCH.
-// THIS TIME, SEARCH FOR A 1 CHARACTER MATCH AGAINST THE WILDCARDS
-
-// RESET THE INDEX TO POINT TO THE START OF THE PHONEME NAME TABLE
-		Y = 0;
-pos41134:
-// DOES THE PHONEME IN THE TABLE END WITH '*'?
-		if (signInputTable2[Y] == '*')
-		{
-// DOES THE FIRST CHARACTER MATCH THE FIRST LETTER OF THE PHONEME
-			if (signInputTable1[Y] == sign1)
-			{
-                // SAVE THE POSITION AND MOVE AHEAD
-				phonemeindex[position] = Y;
-				
-				// ADVANCE THE POINTER
-				position++;
-				
-				// CONTINUE THROUGH THE LOOP
-				continue;
-			}
-		}
-		Y++;
-		if (Y != 81) goto pos41134; //81 is size of PHONEME NAME table
-
-// FAILED TO MATCH WITH A WILDCARD. ASSUME THIS IS A STRESS
-// CHARACTER. SEARCH THROUGH THE STRESS TABLE
-
-        // SET INDEX TO POSITION 8 (END OF STRESS TABLE)
-		Y = 8;
-		
-       // WALK BACK THROUGH TABLE LOOKING FOR A MATCH
-		while( (sign1 != stressInputTable[Y]) && (Y>0))
-		{
-  // DECREMENT INDEX
-			Y--;
-		}
-
-        // REACHED THE END OF THE SEARCH WITHOUT BREAKING OUT OF LOOP?
-		if (Y == 0)
-		{
-			//mem[39444] = X;
-			//41181: JSR 42043 //Error
-           // FAILED TO MATCH ANYTHING, RETURN 0 ON FAILURE
-			return 0;
-		}
-// SET THE STRESS FOR THE PRIOR PHONEME
-		stress[position-1] = Y;
+            stress[position-1] = match; // Set stress for prior phoneme
+        }
 	} //while
+
+    phonemeindex[position] = 255;      //mark endpoint
+    return 1;
 }
 
 
@@ -527,6 +482,40 @@ void drule_post(unsigned char X) {
 //       J -> J J' (J requires two phonemes to represent it)
 //       <UNSTRESSED VOWEL> T <PAUSE> -> <UNSTRESSED VOWEL> DX <PAUSE>
 //       <UNSTRESSED VOWEL> D <PAUSE>  -> <UNSTRESSED VOWEL> DX <PAUSE>
+
+
+void rule_alveolar_uw(unsigned char X) {
+    // ALVEOLAR flag set?
+    unsigned char A = flags2[phonemeindex[X-1]] & 4;
+    if (A) {
+        drule("<ALVEOLAR> UW -> <ALVEOLAR> UX");
+        phonemeindex[X] = 16;
+    }
+}
+
+void rule_ch(unsigned char X, unsigned char mem59) {
+    drule("CH -> CH CH+1");
+    Insert(X+1, 43, mem59, stress[X]);
+}
+
+void rule_j(unsigned char X, unsigned char mem59) {
+    drule("J -> J J+1");
+    Insert(X+1, 45, mem59, stress[X]);
+}
+
+void rule_g(unsigned char pos) {
+    // G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
+    // Example: GO
+
+    unsigned char index = phonemeindex[pos+1];
+            
+    // If dipthong ending with YX, move continue processing next phoneme
+    if ((index != 255) && ((flags[index] & 32) == 0)) {
+        // replace G with GX and continue processing next phoneme
+        if (debug) printf("RULE: G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
+        phonemeindex[pos] = 63; // 'GX'
+    }
+}
 
 
 void Parser2() {
@@ -646,19 +635,7 @@ void Parser2() {
                 //       2. Reciter already replaces GS -> GZ
                 drule("G S -> G Z");
                 phonemeindex[pos] = 38;    // 'Z'
-            } else if (p == 60) { // 'G'
-                // G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
-                // Example: GO
-
-                unsigned char index = phonemeindex[pos+1];
-            
-                // If dipthong ending with YX, move continue processing next phoneme
-                if ((index != 255) && ((flags[index] & 32) == 0)) {
-                    // replace G with GX and continue processing next phoneme
-                    if (debug) printf("RULE: G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
-                    phonemeindex[pos] = 63; // 'GX'
-                }
-            }
+            } else if (p == 60) rule_g(pos);
 
             pos++;
             continue;
@@ -698,46 +675,21 @@ void Parser2() {
             continue;
         } 
 
-        if ((flags[Y] & 1)) {
-            A = Y;
-            goto pos41812;
-        }
+        if (!(flags[Y] & 1)) {
 
     pos41749:
-        // RULE:
-        //      <ALVEOLAR> UW -> <ALVEOLAR> UX
-        //
-        // Example: NEW, DEW, SUE, ZOO, THOO, TOO
-		A = phonemeindex[X];
-        if (A == 53 || A == 42 || A == 44) {
-            if (A == 53) { // 'UW'
-                // ALVEOLAR flag set?
-                A = flags2[phonemeindex[X-1]] & 4;
-                if (A) {
-                    if (debug) printf("RULE: <ALVEOLAR> UW -> <ALVEOLAR> UX\n");
-                    phonemeindex[X] = 16;
-                }
+            A = phonemeindex[X];
+            if (A == 53 || A == 42 || A == 44) {
+                if (A == 53) rule_alveolar_uw(X);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
+                else if (A == 42) rule_ch(X,mem59); // Example: CHEW
+                else if (A == 44) rule_j(X,mem59);  // Example: JAY
+                pos++;
+                continue;
             }
-
-            // RULE:
-            //       CH -> CH CH' (CH requires two phonemes to represent it)
-            // Example: CHEW
-            if (A == 42) {   // 'CH'
-                if (debug) printf("CH -> CH CH+1\n");
-                Insert(X+1, 43, mem59, stress[X]);
-            }
-
-            // RULE:
-            //       J -> J J' (J requires two phonemes to represent it)
-            // Example: JAY
-            if (A == 44) { // 'J'
-                if (debug) printf("J -> J J+1\n");
-                Insert(X+1, 45, mem59, stress[X]);
-            }
-			pos++;
-			continue;
-		}
-
+        } else {
+            A = Y;
+        }
+        
         // Jump here to continue 
     pos41812:
         // RULE: Soften T following vowel
@@ -761,14 +713,10 @@ void Parser2() {
                     }
                 } else {
                     A = phonemeindex[X+1];
-                    if (A == 255) //prevent buffer overflow
-                        A = 65 & 128;
-                    else
-                        // Is next phoneme a vowel or ER?
-                        if (flags[A] & 128) {
-                            if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
-                            if (A != 0) phonemeindex[pos] = 30;  // 'DX'
-                        }
+                    if (A != 255 && (flags[A] & 128)) { // Next phoneme is a vowel or ER
+                        if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
+                        if (A != 0) phonemeindex[pos] = 30;  // 'DX'
+                    }
                 }
             }
         }
