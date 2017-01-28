@@ -849,15 +849,8 @@ void AdjustLengths() {
 		unsigned char X = loopIndex;
 
 		// vowel?
-		unsigned char A = flags[index] & 128;
-        unsigned char mem56;
-		if (A != 0) {
+		if (flags[index] & 128) {
 			index = phonemeindex[loopIndex+1];
-			// get flags
-			if (index == 255) 
-                mem56 = 65; // use if end marker
-			else
-                mem56 = flags[index];
 
             // not a consonant
 			if ((flags[index] & 64) == 0) {
@@ -871,41 +864,31 @@ void AdjustLengths() {
                         drule_post(loopIndex);
                     }
 				}
-				// move ahead
-				loopIndex++;
-				continue;
-			}
-			
-			
-			// Got here if not <VOWEL>
+			} else {
+                // Got here if not <VOWEL>
 
-            // not voiced
-			if ((mem56 & 4) == 0) {
-                 // Unvoiced 
-                 // *, .*, ?*, ,*, -*, DX, S*, SH, F*, TH, /H, /X, CH, P*, T*, K*, KX
-                 
-				if((mem56 & 1)) { // unvoiced plosive
-                    // RULE: <VOWEL> <UNVOICED PLOSIVE>
-                    // <VOWEL> <P*, T*, K*, KX>
+                unsigned char flag = (index == 255) ? 65 : flags[index]; // 65 if end marker
 
-                    drule_pre("<VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th",loopIndex);
-                    mem56 = phonemeLength[loopIndex] >> 3;
-                    phonemeLength[loopIndex] -= mem56;
+                if (!(flag & 4)) { // Unvoiced
+                    // *, .*, ?*, ,*, -*, DX, S*, SH, F*, TH, /H, /X, CH, P*, T*, K*, KX
+                    if((flag & 1)) { // unvoiced plosive
+                        // RULE: <VOWEL> <UNVOICED PLOSIVE>
+                        // <VOWEL> <P*, T*, K*, KX>
+                        drule_pre("<VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th",loopIndex);
+                        phonemeLength[loopIndex] -= (phonemeLength[loopIndex] >> 3);
+                        drule_post(loopIndex);
+                    }
+                } else {
+                    // RULE: <VOWEL> <VOICED CONSONANT>
+                    // <VOWEL> <WH, R*, L*, W*, Y*, M*, N*, NX, DX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX>
+                    
+                    drule_pre("<VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n",X-1);
+                    // decrease length
+                    unsigned char A = phonemeLength[loopIndex];
+                    phonemeLength[loopIndex] = (A >> 2) + A + 1;     // 5/4*A + 1
                     drule_post(loopIndex);
                 }
-			} else {
-                // RULE: <VOWEL> <VOICED CONSONANT>
-                // <VOWEL> <WH, R*, L*, W*, Y*, M*, N*, NX, DX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX>
-
-                drule_pre("<VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n",X-1);
-                // decrease length
-                A = phonemeLength[loopIndex];
-                phonemeLength[loopIndex] = (A >> 2) + A + 1;     // 5/4*A + 1
-                drule_post(loopIndex);
             }
-
-			++loopIndex;
-			continue;
 		}
 
         // WH, R*, L*, W*, Y*, M*, N*, NX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
@@ -915,19 +898,11 @@ void AdjustLengths() {
         //       Set stop consonant length to 5
            
         // nasal?
-        if((flags2[index] & 8) != 0) {
+        else if((flags2[index] & 8) != 0) {
             // M*, N*, NX, 
 
             index = phonemeindex[++X];
-
-            // end of buffer?
-            if (index == 255)
-                A = 65&2;  //prevent buffer overflow
-            else
-                A = flags[index] & 2; // check for stop consonant
-
-            // is next phoneme a stop consonant?
-            if (A != 0) {
+            if (index != 255 && (flags[index] & 2)) { // stop consonant?
                // B*, D*, G*, GX, P*, T*, K*, KX
 
                 drule("<NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
@@ -942,8 +917,6 @@ void AdjustLengths() {
                 if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
                 if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
             }
-            loopIndex++;
-            continue;
         }
 
         // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
@@ -952,7 +925,7 @@ void AdjustLengths() {
         //       Shorten both to (length/2 + 1)
 
         // (voiced) stop consonant?
-        if((flags[index] & 2) != 0) {
+        else if((flags[index] & 2) != 0) {
             // B*, D*, G*, GX
 
             // move past silence
@@ -985,8 +958,6 @@ void AdjustLengths() {
             if (debug) printf("phoneme %d (%c%c) length %d\n", debugX, signInputTable1[phonemeindex[debugX]], signInputTable2[phonemeindex[debugX]], phonemeLength[debugX]);
             if (debug) printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[phonemeindex[debugX-1]], signInputTable2[phonemeindex[debugX-1]], phonemeLength[debugX-1]);
 
-            loopIndex++;
-            continue;
         }
         // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
 
@@ -994,26 +965,20 @@ void AdjustLengths() {
         //       Decrease <DIPTHONG> by 2
 
         // liquic consonant?
-        if ((flags2[index] & 16) != 0) {
+        else if ((flags2[index] & 16) != 0) {
             // R*, L*, W*, Y*
                            
-            // get the prior phoneme
-            index = phonemeindex[X-1];
+            index = phonemeindex[X-1]; // prior phoneme;
 
             // FIXME: The debug code here breaks the rule.
             // prior phoneme a stop consonant>
             if((flags[index] & 2) != 0) 
-                // Rule: <LIQUID CONSONANT> <DIPTHONG>
-
                 drule_pre("<LIQUID CONSONANT> <DIPTHONG> - decrease by 2",X);
             
-            // decrease the phoneme length by 2 frames (20 ms)
-            phonemeLength[X] -= 2;
+            phonemeLength[X] -= 2; // 20ms
             drule_post(X);
          }
 
-         // move to next phoneme
-         loopIndex++;
-         continue;
+        ++loopIndex;
     }
 }
