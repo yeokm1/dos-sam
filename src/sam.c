@@ -70,7 +70,7 @@ void SetPhonemeLength();
 void AdjustLengths();
 void Code41240();
 void Insert(unsigned char position, unsigned char mem60, unsigned char mem59, unsigned char mem58);
-void InsertBreath();
+void InsertBreath(unsigned char mem59);
 void PrepareOutput();
 void SetMouthThroat(unsigned char mouth, unsigned char throat);
 
@@ -148,7 +148,7 @@ int SAMMain() {
 			break; // error: delete all behind it
 		}
 	} while (++X != 0);
-	InsertBreath();
+	InsertBreath(mem59);
 
 	if (debug) PrintPhonemes(phonemeindex, phonemeLength, stress);
 
@@ -157,71 +157,60 @@ int SAMMain() {
 }
 
 void PrepareOutput() {
-	unsigned char X = 0; // Position in source
-	unsigned char Y = 0; // Position in output
+	unsigned char srcpos  = 0; // Position in source
+	unsigned char destpos = 0; // Position in output
 
 	while(1) {
-		unsigned char A = phonemeindex[X];
-
-        phonemeIndexOutput[Y] = A;
-
-		if (A == 255) { // End of input
+		unsigned char A = phonemeindex[srcpos];
+        phonemeIndexOutput[destpos] = A;
+        switch(A) {
+        case 255: // End of input
 			Render();
 			return;
-		}
-
-		if (A == 254) {
-			++X;
-			phonemeIndexOutput[Y] = 255;
+		case 254: // Break
+			phonemeIndexOutput[destpos] = 255;
 			Render();
-			Y = 0;
-			continue;
-		}
-
-		if (A == 0) {
-			++X;
-			continue;
-		}
-
-		phonemeIndexOutput[Y]  = A;
-		phonemeLengthOutput[Y] = phonemeLength[X];
-		stressOutput[Y]        = stress[X];
-		++X;
-		++Y;
+			destpos = 0;
+            break;
+        case 0:
+            break;
+        default:
+            phonemeLengthOutput[destpos] = phonemeLength[srcpos];
+            stressOutput[destpos]        = stress[srcpos];
+            ++destpos;
+        }
+		++srcpos;
 	}
 }
 
 
-void InsertBreath() {
+void InsertBreath(unsigned char mem59) {
 	unsigned char mem54 = 255;
-	unsigned char mem55 = 0;
+	unsigned char len = 0;
 	unsigned char index; //variable Y
 
 	unsigned char pos = 0;
 
 	while((index = phonemeindex[pos]) != 255) {
-		mem55 += phonemeLength[pos];
-
-		if (mem55 < 232) {
-			if (index != 254) { // ML : Prevents an index out of bounds problem
-                if((flags2[index]&1) != 0) {
-					mem55 = 0;
-					Insert(pos+1, 254, mem59, 0);
-					pos += 2;
-					continue;
-				}
+		len += phonemeLength[pos];
+		if (len < 232) {
+			if (index != 254 &&
+                (flags2[index]&1) != 0) {
+                len = 0;
+                Insert(pos+1, 254, mem59, 0);
+                pos += 2;
+                continue;
 			}
 			if (index == 0) mem54 = pos;
-			++pos;
-			continue;
-		}
-
-		phonemeindex[mem54]  = 31;   // 'Q*' glottal stop
-		phonemeLength[mem54] = 4;
-		stress[mem54] = 0;
-		mem55 = 0;
-		Insert(mem54+1, 254, mem59, 0);
-		pos = mem54+2;
+		} else {
+            pos = mem54;
+            phonemeindex[pos]  = 31;   // 'Q*' glottal stop
+            phonemeLength[pos] = 4;
+            stress[pos] = 0;
+            len = 0;
+            Insert(++pos, 254, mem59, 0);
+        }
+        ++pos;
 	}
 }
 
