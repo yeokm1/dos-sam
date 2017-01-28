@@ -236,26 +236,21 @@ void CopyStress() {
     unsigned char Y;
 	while((Y = phonemeindex[pos]) != 255) {
 		// if CONSONANT_FLAG set, skip - only vowels get stress
-		if ((flags[Y] & 64) == 0) {pos++; continue;}
-		Y = phonemeindex[pos+1];
-		if (Y == 255) //prevent buffer overflow
-		{
-			pos++; continue;
-		}
-		// if the following phoneme is a vowel, skip
-        if ((flags[Y] & 128) == 0)  {pos++; continue;}
+		if (flags[Y] & 64) {
+            Y = phonemeindex[pos+1];
 
-        // get the stress value at the next position
-		Y = stress[pos+1];
+            // if the following phoneme is the end, or a vowel, skip
+            if (Y != 255 && (flags[Y] & 128) != 0) {
+                // get the stress value at the next position
+                Y = stress[pos+1];
+                if (Y && !(Y&128)) {
+                    // if next phoneme is stressed, and a VOWEL OR ER
+                    // copy stress from next phoneme to this one
+                    stress[pos] = Y+1;
+                }
+            }
+        }
 
-		// if next phoneme is not stressed, skip
-		if (Y == 0)  {pos++; continue;}
-		// if next phoneme is not a VOWEL OR ER, skip
-		if ((Y & 128) != 0)  {pos++; continue;}
-
-		// copy stress from prior phoneme to this one
-		stress[pos] = Y+1;
-		
 		++pos;
 	}
 }
