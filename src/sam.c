@@ -560,15 +560,22 @@ void Parser2() {
             if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
             if (A==21) drule("insert YX following dipthong ending in IY sound");
             Insert(pos+1, A, mem59, stress[pos]);
-            X = pos;
 
-            goto pos41749;
+            if (p == 53 || p == 42 || p == 44) {
+                if (p == 53) rule_alveolar_uw(pos);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
+                else if (p == 42) rule_ch(pos,mem59); // Example: CHEW
+                else if (p == 44) rule_j(pos,mem59);  // Example: JAY
+                pos++;
+                continue;
+            }
+            goto pos41812;
         }
 
         if (p == 78 || p == 79 || p == 80) {
             if (p == 78) ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");       // Example: MEDDLE
             else if (p == 79) ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M"); // Example: ASTRONOMY
             else if (p == 80) ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N"); // Example: FUNCTION
+
             ++pos;
             continue;
         }
@@ -615,6 +622,7 @@ void Parser2() {
                         drule("D R -> J R");
                         phonemeindex[pos-1] = 44;
                     }
+                    A=p;
                     goto pos41812;
                 }
                 
@@ -674,8 +682,6 @@ void Parser2() {
         } 
 
         if (!(flags[Y] & 1)) {
-
-    pos41749:
             A = phonemeindex[X];
             if (A == 53 || A == 42 || A == 44) {
                 if (A == 53) rule_alveolar_uw(X);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
@@ -711,7 +717,7 @@ void Parser2() {
                     }
                 } else {
                     A = phonemeindex[X+1];
-                    if (A != 255 && (flags[A] & 128)) { // Next phoneme is a vowel or ER
+                    if (A != END && (flags[A] & 128)) { // Next phoneme is a vowel or ER
                         if (debug) printf("RULE: Soften T or D following vowel or ER and preceding a pause -> DX\n");
                         if (A != 0) phonemeindex[pos] = 30;  // 'DX'
                     }
@@ -864,7 +870,7 @@ void AdjustLengths() {
             phonemeLength[X]         = (phonemeLength[X] >> 1) + 1;
             X = loopIndex;
             phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
-        } else if ((flags[index] & 0x1000) != 0) { // liquic consonant?
+        } else if ((flags[index] & FLAG_LIQUIC) != 0) { // liquic consonant?
             // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
 
             // RULE: <VOICED NON-VOWEL> <DIPTHONG>
