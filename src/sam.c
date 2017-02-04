@@ -6,6 +6,13 @@
 #include "render.h"
 #include "SamTabs.h"
 
+enum {
+    BREAK = 254,
+    END   = 255
+};
+
+
+
 char input[256]; //tab39445
 //standard sam sound
 unsigned char speed = 72;
@@ -127,7 +134,7 @@ void Init()
 		stressOutput[i] = 0;
 		phonemeLengthOutput[i] = 0;
 	}
-	phonemeindex[255] = 255; //to prevent buffer overflow // ML : changed from 32 to 255 to stop freezing with long inputs
+	phonemeindex[255] = END; //to prevent buffer overflow // ML : changed from 32 to 255 to stop freezing with long inputs
 
 }
 
@@ -164,11 +171,11 @@ void PrepareOutput() {
 		unsigned char A = phonemeindex[srcpos];
         phonemeIndexOutput[destpos] = A;
         switch(A) {
-        case 255: // End of input
+        case END:
 			Render();
 			return;
-		case 254: // Break
-			phonemeIndexOutput[destpos] = 255;
+		case BREAK:
+			phonemeIndexOutput[destpos] = END;
 			Render();
 			destpos = 0;
             break;
@@ -191,24 +198,24 @@ void InsertBreath(unsigned char mem59) {
 
 	unsigned char pos = 0;
 
-	while((index = phonemeindex[pos]) != 255) {
+	while((index = phonemeindex[pos]) != END) {
 		len += phonemeLength[pos];
 		if (len < 232) {
-			if (index != 254 &&
-                (flags2[index]&1) != 0) {
+			if (index == BREAK) {
+            } else if (!(flags2[index]&1)) {
+                if (index == 0) mem54 = pos;
+            } else {
                 len = 0;
-                Insert(pos+1, 254, mem59, 0);
-                pos += 2;
-                continue;
-			}
-			if (index == 0) mem54 = pos;
+                Insert(++pos, BREAK, mem59, 0);
+            }
 		} else {
             pos = mem54;
             phonemeindex[pos]  = 31;   // 'Q*' glottal stop
             phonemeLength[pos] = 4;
             stress[pos] = 0;
+
             len = 0;
-            Insert(++pos, 254, mem59, 0);
+            Insert(++pos, BREAK, mem59, 0);
         }
         ++pos;
 	}
@@ -390,11 +397,9 @@ int Parser1()
 
 //change phonemelength depedendent on stress
 void SetPhonemeLength() {
-	unsigned char A;
 	int position = 0;
-	while(phonemeindex[position] != 255 )
-	{
-		A = stress[position];
+	while(phonemeindex[position] != 255 ) {
+		unsigned char A = stress[position];
 		if ((A == 0) || ((A&128) != 0)) {
 			phonemeLength[position] = phonemeLengthTable[phonemeindex[position]];
 		} else {
