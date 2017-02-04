@@ -7,6 +7,9 @@
 #include "SamTabs.h"
 
 enum {
+    pR    = 23,
+    pD    = 57,
+    pT    = 69,
     BREAK = 254,
     END   = 255
 };
@@ -202,7 +205,7 @@ void InsertBreath(unsigned char mem59) {
 		len += phonemeLength[pos];
 		if (len < 232) {
 			if (index == BREAK) {
-            } else if (!(flags2[index]&1)) {
+            } else if (!(flags[index]& FLAG_PUNCT)) {
                 if (index == 0) mem54 = pos;
             } else {
                 len = 0;
@@ -241,13 +244,13 @@ void CopyStress() {
     // loop thought all the phonemes to be output
 	unsigned char pos=0; //mem66
     unsigned char Y;
-	while((Y = phonemeindex[pos]) != 255) {
+	while((Y = phonemeindex[pos]) != END) {
 		// if CONSONANT_FLAG set, skip - only vowels get stress
 		if (flags[Y] & 64) {
             Y = phonemeindex[pos+1];
 
             // if the following phoneme is the end, or a vowel, skip
-            if (Y != 255 && (flags[Y] & 128) != 0) {
+            if (Y != END && (flags[Y] & 128) != 0) {
                 // get the stress value at the next position
                 Y = stress[pos+1];
                 if (Y && !(Y&128)) {
@@ -390,7 +393,7 @@ int Parser1()
         }
 	} //while
 
-    phonemeindex[position] = 255;      //mark endpoint
+    phonemeindex[position] = END;
     return 1;
 }
 
@@ -491,8 +494,7 @@ void drule_post(unsigned char X) {
 
 void rule_alveolar_uw(unsigned char X) {
     // ALVEOLAR flag set?
-    unsigned char A = flags2[phonemeindex[X-1]] & 4;
-    if (A) {
+    if (flags[phonemeindex[X-1]] & FLAG_ALVEOLAR) {
         drule("<ALVEOLAR> UW -> <ALVEOLAR> UX");
         phonemeindex[X] = 16;
     }
@@ -593,24 +595,22 @@ void Parser2() {
 
         // Get current position and phoneme
 		X = pos;
-		A = p;
         
         unsigned char prior = phonemeindex[pos-1];
 
-        if (p == 23 || p == 24 || p == 32 || A == 60) {
+        if (p == pR || p == 24 || p == 32 || A == 60) {
 
-            if (p == 23) { // 'R'
+            if (p == pR) { // 'R'
                 // RULES FOR PHONEMES BEFORE R
                 // Look at prior phoneme
                 X--;
                 A = prior;
-                
-                if (prior == 69 || prior == 57) {
-                    if (prior == 69) { // 'T'
+                if (prior == pT || prior == pD) {
+                    if (prior == pT) {
                         // Example: TRACK
                         drule("T R -> CH R");
                         phonemeindex[pos-1] = 42;
-                    } else if (prior == 57) { // 'D'
+                    } else if (prior == pD) {
                         // Example: DRY
                         drule("D R -> J R");
                         phonemeindex[pos-1] = 44;
@@ -748,7 +748,7 @@ void AdjustLengths() {
 	unsigned char loopIndex=0;
 	while((index = phonemeindex[X]) != 255) {
 		// not punctuation?
-		if((flags2[index] & 1) == 0) { // skip
+		if((flags[index] & FLAG_PUNCT) == 0) { // skip
 			++X;
 			continue;
 		}
@@ -765,7 +765,7 @@ void AdjustLengths() {
 
 			//if (index != 255)//inserted to prevent access overrun
 			// test for fricative/unvoiced or not voiced
-			if(((flags2[index] & 32) == 0) || ((flags[index] & 4) != 0))     //nochmal überprüfen
+			if(((flags[index] & 0x2000) == 0) || ((flags[index] & 4) != 0))     //nochmal überprüfen
 			{
 				unsigned char A = phonemeLength[X];
 
@@ -836,7 +836,7 @@ void AdjustLengths() {
         //       Set stop consonant length to 5
            
         
-        else if((flags2[index] & 8) != 0) { // nasal?
+        else if((flags[index] & FLAG_NASAL) != 0) { // nasal?
             // M*, N*, NX, 
 
             index = phonemeindex[++X];
@@ -864,7 +864,7 @@ void AdjustLengths() {
             phonemeLength[X]         = (phonemeLength[X] >> 1) + 1;
             X = loopIndex;
             phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
-        } else if ((flags2[index] & 16) != 0) { // liquic consonant?
+        } else if ((flags[index] & 0x1000) != 0) { // liquic consonant?
             // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
 
             // RULE: <VOICED NON-VOWEL> <DIPTHONG>
