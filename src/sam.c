@@ -260,14 +260,14 @@ void Insert(unsigned char position/*var57*/, unsigned char mem60, unsigned char 
 	int i;
 	for(i=253; i >= position; i--) // ML : always keep last safe-guarding 255	
 	{
-		phonemeindex[i+1] = phonemeindex[i];
+		phonemeindex[i+1]  = phonemeindex[i];
 		phonemeLength[i+1] = phonemeLength[i];
-		stress[i+1] = stress[i];
+		stress[i+1]        = stress[i];
 	}
 
-	phonemeindex[position] = mem60;
+	phonemeindex[position]  = mem60;
 	phonemeLength[position] = mem59;
-	stress[position] = mem58;
+	stress[position]        = mem58;
 	return;
 }
 
@@ -573,19 +573,12 @@ void Parser2() {
         if ((pf & 128) && stress[X]) { // VOWEL && stressed
             if (!phonemeindex[++X]) { // If following phoneme is a pause, get next
                 unsigned char Y = phonemeindex[++X];
-                // Check for end of buffer flag
-                if (Y == 255) { //buffer overflow
-                    // ??? Not sure about these flags
-                    A = 65&128;
-                } else {
-                    // And VOWEL flag to current phoneme's flags
-                    A = flags[Y] & 128;
-                }
                 
-                
+                // And VOWEL flag to current phoneme's flags
+                A = (Y == 255) ? 0 : flags[Y] & 128;
                 if (A && stress[X]) { // If following phonemes is not a pause, and is not stressed
                     // Insert a glottal stop and move forward
-                    if (debug) printf("RULE: Insert glottal stop between two stressed vowels with space between them\n");
+                    drule("Insert glottal stop between two stressed vowels with space between them");
                     Insert(X, 31, mem59, 0); // 31 = 'Q'
                     pos++;
                     continue;
@@ -822,9 +815,6 @@ void AdjustLengths() {
                         drule_post(loopIndex);
                     }
                 } else {
-                    // RULE: <VOWEL> <VOICED CONSONANT>
-                    // <VOWEL> <WH, R*, L*, W*, Y*, M*, N*, NX, DX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX>
-                    
                     drule_pre("<VOWEL> <VOICED CONSONANT> - increase vowel by 1/2 + 1\n",X-1);
                     // decrease length
                     unsigned char A = phonemeLength[loopIndex];
@@ -840,75 +830,40 @@ void AdjustLengths() {
         //       Set punctuation length to 6
         //       Set stop consonant length to 5
            
-        // nasal?
-        else if((flags2[index] & 8) != 0) {
+        
+        else if((flags2[index] & 8) != 0) { // nasal?
             // M*, N*, NX, 
 
             index = phonemeindex[++X];
             if (index != 255 && (flags[index] & 2)) { // stop consonant?
-               // B*, D*, G*, GX, P*, T*, K*, KX
-
                 drule("<NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
-                if (debug) printf("PRE\n");
-                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-                if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
-
                 phonemeLength[X]   = 6; // set stop consonant length to 6
                 phonemeLength[X-1] = 5; // set nasal length to 5
-
-                if (debug) printf("POST\n");
-                if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-                if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
             }
-        }
-
-        // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
-
-        // RULE: <VOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
-        //       Shorten both to (length/2 + 1)
-
-        // (voiced) stop consonant?
-        else if((flags[index] & 2) != 0) {
-            // B*, D*, G*, GX
+        } else if((flags[index] & 2) != 0) { // (voiced) stop consonant?
+            // RULE: <VOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
+            //       Shorten both to (length/2 + 1)
 
             // move past silence
             while ((index = phonemeindex[++X]) == 0);
 
-            // check for end of buffer
-            if (index == 255) {
-                if ((65 & 2) == 0) {loopIndex++; continue;}
-            } else if ((flags[index] & 2) == 0) {
-                // if another stop consonant, move ahead
+            if (index == 255 || (flags[index] & 2) == 0) {
+                // if end of buffer or another stop consonant, move ahead
                 loopIndex++;
                 continue;
             }
 
+            // FIXME, this looks wrong?
             // RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
             if (debug) printf("RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1\n");
-            if (debug) printf("PRE\n");
-            if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
-            if (debug) printf("phoneme %d (%c%c) length %d\n", X-1, signInputTable1[phonemeindex[X-1]], signInputTable2[phonemeindex[X-1]], phonemeLength[X-1]);
-            // X gets overwritten, so hold prior X value for debug statement
-            int debugX = X;
-            // shorten the prior phoneme length to (length/2 + 1)
-            phonemeLength[X] = (phonemeLength[X] >> 1) + 1;
+            phonemeLength[X]         = (phonemeLength[X] >> 1) + 1;
             X = loopIndex;
-
-            // also shorten this phoneme length to (length/2 +1)
             phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
+        } else if ((flags2[index] & 16) != 0) { // liquic consonant?
+            // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
 
-            if (debug) printf("POST\n");
-            if (debug) printf("phoneme %d (%c%c) length %d\n", debugX, signInputTable1[phonemeindex[debugX]], signInputTable2[phonemeindex[debugX]], phonemeLength[debugX]);
-            if (debug) printf("phoneme %d (%c%c) length %d\n", debugX-1, signInputTable1[phonemeindex[debugX-1]], signInputTable2[phonemeindex[debugX-1]], phonemeLength[debugX-1]);
-
-        }
-        // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
-
-        // RULE: <VOICED NON-VOWEL> <DIPTHONG>
-        //       Decrease <DIPTHONG> by 2
-
-        // liquic consonant?
-        else if ((flags2[index] & 16) != 0) {
+            // RULE: <VOICED NON-VOWEL> <DIPTHONG>
+            //       Decrease <DIPTHONG> by 2
             // R*, L*, W*, Y*
                            
             index = phonemeindex[X-1]; // prior phoneme;
