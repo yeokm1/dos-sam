@@ -40,10 +40,17 @@ unsigned char signInputTable2[] =
 
 //loc_9F8C 
 enum {
+    FLAG_PLOSIVE  = 0x0001,
+    FLAG_STOPCONS = 0x0002, /* stop consonant */
+    FLAG_VOICED   = 0x0004,
+    FLAG_DIPTHONG = 0x0010,
+    FLAG_CONSONANT= 0x0040,
+    FLAG_VOWEL    = 0x0080,
     FLAG_PUNCT    = 0x0100,
     FLAG_ALVEOLAR = 0x0400,
     FLAG_NASAL    = 0x0800,
-    FLAG_LIQUIC   = 0x1000  /* liquic consonant */
+    FLAG_LIQUIC   = 0x1000,  /* liquic consonant */
+    FLAG_FRICATIVE= 0x2000
 };
 
 unsigned short flags[]={

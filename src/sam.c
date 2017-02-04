@@ -154,7 +154,7 @@ int SAMMain() {
 	Code41240();
 	do {
 		if (phonemeindex[X] > 80) {
-			phonemeindex[X] = 255;
+			phonemeindex[X] = END;
 			break; // error: delete all behind it
 		}
 	} while (++X != 0);
@@ -525,29 +525,29 @@ void rule_g(unsigned char pos) {
 }
 
 
+
+
+
 void Parser2() {
-	if (debug) printf("Parser2\n");
 	unsigned char pos = 0; //mem66;
+    unsigned char p;
 
-    // Loop through phonemes
-	while(1) {
-		X = pos;
-		unsigned char p = phonemeindex[pos];
-        unsigned char A = p;
+	if (debug) printf("Parser2\n");
 
-		if (p == END) return;
-
-		if (debug) printf("%d: %c%c\n", X, signInputTable1[p], signInputTable2[p]);
+	while((p = phonemeindex[pos]) != END) {
+		if (debug) printf("%d: %c%c\n", pos, signInputTable1[p], signInputTable2[p]);
 
 		if (p == 0) { // Is phoneme pause?
 			++pos;
 			continue;
 		}
 
+        unsigned char A = p;
         unsigned char pf = flags[p];
+		X = pos;
 
-        if ((pf & 16) || p == 78 || p == 79 || p == 80) {
-            if ((pf & 16)) { // Check for DIPTHONG
+        if ((pf & FLAG_DIPTHONG) || p == 78 || p == 79 || p == 80) {
+            if ((pf & FLAG_DIPTHONG)) { // Check for DIPTHONG
                 // RULE: 
                 //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
                 //       <DIPTHONG NOT ENDING WITH WX> -> <DIPTHONG NOT ENDING WITH WX> YX
@@ -572,19 +572,17 @@ void Parser2() {
 
             ++pos;
             continue;
-        }
+        } else if ((pf & FLAG_VOWEL) && stress[X]) {
+            // RULE:
+            //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
+            // EXAMPLE: AWAY EIGHT
 
-        // RULE:
-        //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
-        // EXAMPLE: AWAY EIGHT
-
-        else if ((pf & 128) && stress[X]) { // VOWEL && stressed
             if (!phonemeindex[X+1]) { // If following phoneme is a pause, get next
                 X+=2;
                 unsigned char Y = phonemeindex[X];
                 
                 // And VOWEL flag to current phoneme's flags
-                A = (Y == END) ? 0 : flags[Y] & 128;
+                A = (Y == END) ? 0 : flags[Y] & FLAG_VOWEL;
                 if (A && stress[X]) { // If following phonemes is not a pause, and is not stressed
                     // Insert a glottal stop and move forward
                     drule("Insert glottal stop between two stressed vowels with space between them");
@@ -601,7 +599,7 @@ void Parser2() {
                 // RULES FOR PHONEMES BEFORE R
                 // Look at prior phoneme
                 X--;
-                A = prior;
+                //A = prior;
                 if (prior == pT || prior == pD) {
                     if (prior == pT) {
                         // Example: TRACK
@@ -614,14 +612,12 @@ void Parser2() {
                     }
                     A=p;
                     goto pos41812;
-                }
-                
-                // Example: ART
-                if (flags[prior] & 128) {
+                } else if (flags[prior] & FLAG_VOWEL) {
+                    // Example: ART
                     drule("<VOWEL> R -> <VOWEL> RX");
                     phonemeindex[pos] = 18;  // 'RX'
                 }
-            } else if (p == 24 && (flags[prior] & 128)) { // 'L' + prior has VOWEL flag set
+            } else if (p == 24 && (flags[prior] & FLAG_VOWEL)) { // 'L' + prior has VOWEL flag set
                 // Example: ALL
                 drule("<VOWEL> L -> <VOWEL> LX");
                 phonemeindex[X] = 19;     // 'LX'
@@ -635,12 +631,9 @@ void Parser2() {
 
             pos++;
             continue;
-		}
-		
-
-        //             K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
-        // Example: COW
-		if (A == 72) {  // 'K'
+		} else if (A == 72) {  // 'K'
+            //             K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
+            // Example: COW
 			unsigned char Y = phonemeindex[pos+1];
             // If at end, replace current phoneme with KX
             if ((flags[Y] & 32)==0 || Y==END) { // VOWELS AND DIPTHONGS ENDING WITH IY SOUND flag set?
@@ -650,31 +643,24 @@ void Parser2() {
             }
 		}
 
-        // RULE:
-        //      S P -> S B
-        //      S T -> S D
-        //      S K -> S G
-        //      S KX -> S GX
-        // Examples: SPY, STY, SKY, SCOWL
-
 		unsigned char Y = phonemeindex[pos];
         // Replace with softer version?
 		if ((flags[Y] & 1) && (prior == 32)) { // 'S'
-            // Replace with softer version
+            // RULE:
+            //      S P -> S B
+            //      S T -> S D
+            //      S K -> S G
+            //      S KX -> S GX
+            // Examples: SPY, STY, SKY, SCOWL
+
             if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
             phonemeindex[pos] = Y-12;
-            pos++;
-            continue;
-        } 
-
-        if (!(flags[Y] & 1)) {
+        } else if (!(flags[Y] & 1)) {
             A = phonemeindex[X];
             if (A == 53 || A == 42 || A == 44) {
                 if (A == 53) rule_alveolar_uw(X);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
                 else if (A == 42) rule_ch(X,mem59); // Example: CHEW
                 else if (A == 44) rule_j(X,mem59);  // Example: JAY
-                pos++;
-                continue;
             }
         } else {
             A = Y;
@@ -723,7 +709,7 @@ void Parser2() {
 //         <NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6
 //         <VOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1
 //         <LIQUID CONSONANT> <DIPTHONG> - decrease by 2
-
+//
 void AdjustLengths() {
     // LENGTHEN VOWELS PRECEDING PUNCTUATION
     //
@@ -736,17 +722,14 @@ void AdjustLengths() {
 	unsigned char X = 0;
 	unsigned char index;
 
-    // iterate through the phoneme list
-	unsigned char loopIndex=0;
-	while((index = phonemeindex[X]) != 255) {
+	while((index = phonemeindex[X]) != END) {
 		// not punctuation?
-		if((flags[index] & FLAG_PUNCT) == 0) { // skip
+		if((flags[index] & FLAG_PUNCT) == 0) {
 			++X;
 			continue;
 		}
 		
-		// hold index
-		loopIndex = X;
+		unsigned char loopIndex = X;
 
         while (--X && !(flags[phonemeindex[X]] & 128)); // back up while not a vowel
         if (X == 0) break;
@@ -755,56 +738,43 @@ void AdjustLengths() {
             // test for vowel
 			index = phonemeindex[X];
 
-			//if (index != 255)//inserted to prevent access overrun
 			// test for fricative/unvoiced or not voiced
-			if(((flags[index] & 0x2000) == 0) || ((flags[index] & 4) != 0))     //nochmal überprüfen
-			{
+			if(!(flags[index] & FLAG_FRICATIVE) || (flags[index] & FLAG_VOICED)) {     //nochmal überprüfen
 				unsigned char A = phonemeLength[X];
-
 				// change phoneme length to (length * 1.5) + 1
-				A = (A >> 1) + A + 1;
                 drule_pre("Lengthen <FRICATIVE> or <VOICED> between <VOWEL> and <PUNCTUATION> by 1.5",X);
-				phonemeLength[X] = A;
+				phonemeLength[X] = (A >> 1) + A + 1;
                 drule_post(X);
 			}
-            // keep moving forward
-			X++;
-		} while (X != loopIndex);
+		} while (++X != loopIndex);
 		X++;
 	}  // while
 
     // Similar to the above routine, but shorten vowels under some circumstances
 
     // Loop throught all phonemes
-	loopIndex = 0;
+	unsigned char loopIndex=0;
 
-	while((index = phonemeindex[loopIndex]) != 255) {
+	while((index = phonemeindex[loopIndex]) != END) {
 		unsigned char X = loopIndex;
 
-		// vowel?
-		if (flags[index] & 128) {
+		if (flags[index] & FLAG_VOWEL) {
 			index = phonemeindex[loopIndex+1];
-
-            // not a consonant
-			if ((flags[index] & 64) == 0) {
+			if (!(flags[index] & FLAG_CONSONANT)) {
 				if ((index == 18) || (index == 19)) { // 'RX', 'LX'
 					index = phonemeindex[loopIndex+2];
-
-					// next phoneme a consonant?
-					if ((flags[index] & 64) != 0) {
+					if ((flags[index] & FLAG_CONSONANT)) {
                         drule_pre("<VOWEL> <RX | LX> <CONSONANT> - decrease length of vowel by 1\n", loopIndex);
     					phonemeLength[loopIndex]--;
                         drule_post(loopIndex);
                     }
 				}
-			} else {
-                // Got here if not <VOWEL>
+			} else { // Got here if not <VOWEL>
+                unsigned char flag = (index == END) ? 65 : flags[index]; // 65 if end marker
 
-                unsigned char flag = (index == 255) ? 65 : flags[index]; // 65 if end marker
-
-                if (!(flag & 4)) { // Unvoiced
+                if (!(flag & FLAG_VOICED)) { // Unvoiced
                     // *, .*, ?*, ,*, -*, DX, S*, SH, F*, TH, /H, /X, CH, P*, T*, K*, KX
-                    if((flag & 1)) { // unvoiced plosive
+                    if((flag & FLAG_PLOSIVE)) { // unvoiced plosive
                         // RULE: <VOWEL> <UNVOICED PLOSIVE>
                         // <VOWEL> <P*, T*, K*, KX>
                         drule_pre("<VOWEL> <UNVOICED PLOSIVE> - decrease vowel by 1/8th",loopIndex);
@@ -819,43 +789,31 @@ void AdjustLengths() {
                     drule_post(loopIndex);
                 }
             }
-		}
-
-        // WH, R*, L*, W*, Y*, M*, N*, NX, Q*, Z*, ZH, V*, DH, J*, B*, D*, G*, GX
-        
-        // RULE: <NASAL> <STOP CONSONANT>
-        //       Set punctuation length to 6
-        //       Set stop consonant length to 5
-           
-        
-        else if((flags[index] & FLAG_NASAL) != 0) { // nasal?
-            // M*, N*, NX, 
-
+		} else if((flags[index] & FLAG_NASAL) != 0) { // nasal?
+            // RULE: <NASAL> <STOP CONSONANT>
+            //       Set punctuation length to 6
+            //       Set stop consonant length to 5
             index = phonemeindex[++X];
-            if (index != 255 && (flags[index] & 2)) { // stop consonant?
+            if (index != END && (flags[index] & 2)) { // stop consonant?
                 drule("<NASAL> <STOP CONSONANT> - set nasal = 5, consonant = 6\n");
                 phonemeLength[X]   = 6; // set stop consonant length to 6
                 phonemeLength[X-1] = 5; // set nasal length to 5
             }
-        } else if((flags[index] & 2) != 0) { // (voiced) stop consonant?
+        } else if((flags[index] & FLAG_STOPCONS) != 0) { // (voiced) stop consonant?
             // RULE: <VOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
             //       Shorten both to (length/2 + 1)
 
             // move past silence
             while ((index = phonemeindex[++X]) == 0);
 
-            if (index == 255 || (flags[index] & 2) == 0) {
-                // if end of buffer or another stop consonant, move ahead
-                loopIndex++;
-                continue;
+            if (index != END && (flags[index] & FLAG_STOPCONS)) {
+                // FIXME, this looks wrong?
+                // RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
+                drule("<UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1");
+                phonemeLength[X]         = (phonemeLength[X] >> 1) + 1;
+                phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
+                X = loopIndex;
             }
-
-            // FIXME, this looks wrong?
-            // RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT>
-            if (debug) printf("RULE: <UNVOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1\n");
-            phonemeLength[X]         = (phonemeLength[X] >> 1) + 1;
-            X = loopIndex;
-            phonemeLength[loopIndex] = (phonemeLength[loopIndex] >> 1) + 1;
         } else if ((flags[index] & FLAG_LIQUIC) != 0) { // liquic consonant?
             // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
 
@@ -867,7 +825,7 @@ void AdjustLengths() {
 
             // FIXME: The debug code here breaks the rule.
             // prior phoneme a stop consonant>
-            if((flags[index] & 2) != 0) 
+            if((flags[index] & FLAG_STOPCONS) != 0) 
                 drule_pre("<LIQUID CONSONANT> <DIPTHONG> - decrease by 2",X);
             
             phonemeLength[X] -= 2; // 20ms
