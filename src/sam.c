@@ -535,7 +535,7 @@ void Parser2() {
 		unsigned char p = phonemeindex[pos];
         unsigned char A = p;
 
-		if (p == 255) return;
+		if (p == END) return;
 
 		if (debug) printf("%d: %c%c\n", X, signInputTable1[p], signInputTable2[p]);
 
@@ -546,33 +546,27 @@ void Parser2() {
 
         unsigned char pf = flags[p];
 
-        // RULE: 
-        //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
-        //       <DIPTHONG NOT ENDING WITH WX> -> <DIPTHONG NOT ENDING WITH WX> YX
-        // Example: OIL, COW
-
-        // Check for DIPTHONG
-		if ((pf & 16) != 0) { // Not a dipthong.
-            // If ends with IY, use YX, else use WX
-            A = (pf & 32) ? 21 : 20; // 'WX' = 20 'YX' = 21
-            
-            // Insert at WX or YX following, copying the stress
-            if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
-            if (A==21) drule("insert YX following dipthong ending in IY sound");
-            Insert(pos+1, A, mem59, stress[pos]);
-
-            if (p == 53 || p == 42 || p == 44) {
-                if (p == 53) rule_alveolar_uw(pos);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
-                else if (p == 42) rule_ch(pos,mem59); // Example: CHEW
-                else if (p == 44) rule_j(pos,mem59);  // Example: JAY
-                pos++;
-                continue;
-            }
-            goto pos41812;
-        }
-
-        if (p == 78 || p == 79 || p == 80) {
-            if (p == 78) ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");       // Example: MEDDLE
+        if ((pf & 16) || p == 78 || p == 79 || p == 80) {
+            if ((pf & 16)) { // Check for DIPTHONG
+                // RULE: 
+                //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
+                //       <DIPTHONG NOT ENDING WITH WX> -> <DIPTHONG NOT ENDING WITH WX> YX
+                // Example: OIL, COW
+                
+                // If ends with IY, use YX, else use WX
+                A = (pf & 32) ? 21 : 20; // 'WX' = 20 'YX' = 21
+                
+                // Insert at WX or YX following, copying the stress
+                if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
+                if (A==21) drule("insert YX following dipthong ending in IY sound");
+                Insert(pos+1, A, mem59, stress[pos]);
+                
+                if (p == 53 || p == 42 || p == 44) {
+                    if (p == 53) rule_alveolar_uw(pos);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
+                    else if (p == 42) rule_ch(pos,mem59); // Example: CHEW
+                    else if (p == 44) rule_j(pos,mem59);  // Example: JAY
+                }
+            } else if (p == 78) ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");       // Example: MEDDLE
             else if (p == 79) ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M"); // Example: ASTRONOMY
             else if (p == 80) ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N"); // Example: FUNCTION
 
@@ -584,12 +578,13 @@ void Parser2() {
         //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
         // EXAMPLE: AWAY EIGHT
 
-        if ((pf & 128) && stress[X]) { // VOWEL && stressed
-            if (!phonemeindex[++X]) { // If following phoneme is a pause, get next
-                unsigned char Y = phonemeindex[++X];
+        else if ((pf & 128) && stress[X]) { // VOWEL && stressed
+            if (!phonemeindex[X+1]) { // If following phoneme is a pause, get next
+                X+=2;
+                unsigned char Y = phonemeindex[X];
                 
                 // And VOWEL flag to current phoneme's flags
-                A = (Y == 255) ? 0 : flags[Y] & 128;
+                A = (Y == END) ? 0 : flags[Y] & 128;
                 if (A && stress[X]) { // If following phonemes is not a pause, and is not stressed
                     // Insert a glottal stop and move forward
                     drule("Insert glottal stop between two stressed vowels with space between them");
@@ -600,13 +595,8 @@ void Parser2() {
             }
         }
 
-        // Get current position and phoneme
-		X = pos;
-        
         unsigned char prior = phonemeindex[pos-1];
-
         if (p == pR || p == 24 || p == 32 || A == 60) {
-
             if (p == pR) { // 'R'
                 // RULES FOR PHONEMES BEFORE R
                 // Look at prior phoneme
@@ -650,18 +640,14 @@ void Parser2() {
 
         //             K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
         // Example: COW
-
 		if (A == 72) {  // 'K'
 			unsigned char Y = phonemeindex[pos+1];
             // If at end, replace current phoneme with KX
-			if (Y == 255) phonemeindex[pos] = 75; // ML : prevents an index out of bounds problem
-			else {
-                // VOWELS AND DIPTHONGS ENDING WITH IY SOUND flag set?
-				A = flags[Y] & 32;
-				if (debug) if (A==0) printf("RULE: K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
+            if ((flags[Y] & 32)==0 || Y==END) { // VOWELS AND DIPTHONGS ENDING WITH IY SOUND flag set?
+                if (debug) printf("RULE: K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
                 // Replace with KX
-				if (A == 0) phonemeindex[pos] = 75;  // 'KX'
-			}
+                phonemeindex[pos] = 75;  // 'KX'
+            }
 		}
 
         // RULE:
