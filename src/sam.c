@@ -380,31 +380,25 @@ void SetPhonemeLength() {
 void Code41240() {
 	unsigned char pos=0;
 
-	while(phonemeindex[pos] != 255) {
-		unsigned char index; //register AC
-		unsigned char X = pos;
-		index = phonemeindex[pos];
-		if ((flags[index]&2) == 0) {
-			pos++;
-			continue;
-		} else if ((flags[index]&1) == 0) {
-			Insert(pos+1, index+1, phonemeLengthTable[index+1], stress[pos]);
-			Insert(pos+2, index+2, phonemeLengthTable[index+2], stress[pos]);
-			pos += 3;
-			continue;
-		}
+	while(phonemeindex[pos] != END) {
+		unsigned char index = phonemeindex[pos];
 
-        unsigned char A;
-        while(!(A = phonemeindex[++X]));
-
-		if (A != 255) {
-			if (flags[A] & 8)    { ++pos; continue;}
-			if ((A == 36) || (A == 37)) {++pos; continue;} // '/H' '/X'
-		}
-
-		Insert(pos+1, index+1, phonemeLengthTable[index+1], stress[pos]);
-		Insert(pos+2, index+2, phonemeLengthTable[index+2], stress[pos]);
-		pos += 3;
+		if ((flags[index]& FLAG_STOPCONS)) {
+            if ((flags[index]& FLAG_PLOSIVE)) {
+                unsigned char A;
+                unsigned char X = pos;
+                while(!(A = phonemeindex[++X])); /* Skip pause */
+                
+                if (A != END) {
+                    if ((flags[A] & 8) || (A == 36) || (A == 37)) {++pos; continue;} // '/H' '/X'
+                }
+                
+            }
+            Insert(pos+1, index+1, phonemeLengthTable[index+1], stress[pos]);
+            Insert(pos+2, index+2, phonemeLengthTable[index+2], stress[pos]);
+            pos += 2;
+        }
+        ++pos;
 	}
 }
 
@@ -484,7 +478,7 @@ void rule_g(unsigned char pos) {
     // If dipthong ending with YX, move continue processing next phoneme
     if ((index != 255) && ((flags[index] & FLAG_DIP_YX) == 0)) {
         // replace G with GX and continue processing next phoneme
-        if (debug) printf("RULE: G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>\n");
+        drule("G <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> GX <VOWEL OR DIPTHONG NOT ENDING WITH IY>");
         phonemeindex[pos] = 63; // 'GX'
     }
 }
@@ -554,40 +548,31 @@ void Parser2() {
                     continue;
                 }
             }
-        } else if (p == pR || p == 24 || p == 32 || p == 60) {
-            if (p == pR) { // 'R'
-                // RULES FOR PHONEMES BEFORE R
-                // Look at prior phoneme
-                X--;
-                //A = prior;
-                if (prior == pT || prior == pD) {
-                    if (prior == pT) {
-                        // Example: TRACK
-                        drule("T R -> CH R");
-                        phonemeindex[pos-1] = 42;
-                    } else if (prior == pD) {
-                        // Example: DRY
-                        drule("D R -> J R");
-                        phonemeindex[pos-1] = 44;
-                    }
-                } else if (flags[prior] & FLAG_VOWEL) {
-                    // Example: ART
-                    drule("<VOWEL> R -> <VOWEL> RX");
-                    phonemeindex[pos] = 18;  // 'RX'
-                }
-            } else if (p == 24 && (flags[prior] & FLAG_VOWEL)) { // 'L' + prior has VOWEL flag set
-                // Example: ALL
-                drule("<VOWEL> L -> <VOWEL> LX");
-                phonemeindex[X] = 19;     // 'LX'
-            } else if (prior == 60 && p == 32) { // 'G' 'S'
-                // Can't get to fire -
-                //       1. The G -> GX rule intervenes
-                //       2. Reciter already replaces GS -> GZ
-                drule("G S -> G Z");
-                phonemeindex[pos] = 38;    // 'Z'
-            } else if (p == 60) rule_g(pos);
-		} else {
-            if (A == 72) {  // 'K'
+        } else if (p == pR) { // 'R'
+            // RULES FOR PHONEMES BEFORE R
+            if (prior == pT) { // Example: TRACK
+                drule("T R -> CH R");
+                phonemeindex[pos-1] = 42;
+            } else if (prior == pD) { // Example: DRY
+                drule("D R -> J R");
+                phonemeindex[pos-1] = 44;
+            } else if (flags[prior] & FLAG_VOWEL) { // Example: ART
+                drule("<VOWEL> R -> <VOWEL> RX");
+                phonemeindex[pos] = 18;  // 'RX'
+            }
+        } else if (p == 24 && (flags[prior] & FLAG_VOWEL)) { // 'L' + prior has VOWEL flag set
+            // Example: ALL
+            drule("<VOWEL> L -> <VOWEL> LX");
+            phonemeindex[X] = 19;     // 'LX'
+        } else if (prior == 60 && p == 32) { // 'G' 'S'
+            // Can't get to fire -
+            //       1. The G -> GX rule intervenes
+            //       2. Reciter already replaces GS -> GZ
+            drule("G S -> G Z");
+            phonemeindex[pos] = 38;    // 'Z'
+        } else if (p == 60) rule_g(pos);
+		else {
+            if (p == 72) {  // 'K'
                 //             K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
                 // Example: COW
                 unsigned char Y = phonemeindex[pos+1];
@@ -595,12 +580,13 @@ void Parser2() {
                 if ((flags[Y] & FLAG_DIP_YX)==0 || Y==END) { // VOWELS AND DIPTHONGS ENDING WITH IY SOUND flag set?
                     drule("K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>");
                     phonemeindex[pos] = 75;  // 'KX'
+                    p = 75;
+                    pf = flags[p];
                 }
             }
 
-            unsigned char Y = phonemeindex[pos];
             // Replace with softer version?
-            if ((flags[Y] & FLAG_PLOSIVE) && (prior == 32)) { // 'S'
+            if ((flags[p] & FLAG_PLOSIVE) && (prior == 32)) { // 'S'
                 // RULE:
                 //      S P -> S B
                 //      S T -> S D
@@ -608,20 +594,16 @@ void Parser2() {
                 //      S KX -> S GX
                 // Examples: SPY, STY, SKY, SCOWL
                 
-                if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[Y], signInputTable2[Y],signInputTable1[Y-12], signInputTable2[Y-12]);
-                phonemeindex[pos] = Y-12;
-            } else if (!(flags[Y] & FLAG_PLOSIVE)) {
-                A = phonemeindex[X];
-                if (A == 53 || A == 42 || A == 44) {
-                    if (A == 53) rule_alveolar_uw(X);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
-                    else if (A == 42) rule_ch(X,mem59); // Example: CHEW
-                    else if (A == 44) rule_j(X,mem59);  // Example: JAY
-                }
-            } else {
-                A = Y;
+                if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[p], signInputTable2[p],signInputTable1[p-12], signInputTable2[p-12]);
+                phonemeindex[pos] = p-12;
+            } else if (!(pf & FLAG_PLOSIVE)) {
+                p = phonemeindex[X];
+                if (p == 53) rule_alveolar_uw(X);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
+                else if (p == 42) rule_ch(X,mem59); // Example: CHEW
+                else if (p == 44) rule_j(X,mem59);  // Example: JAY
             }
             
-            if (A == 69 || A == 57) { // 'T', 'D'
+            if (p == 69 || p == 57) { // 'T', 'D'
                 // RULE: Soften T following vowel
                 // NOTE: This rule fails for cases such as "ODD"
                 //       <UNSTRESSED VOWEL> T <PAUSE> -> <UNSTRESSED VOWEL> DX <PAUSE>
