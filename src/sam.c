@@ -543,8 +543,6 @@ void Parser2() {
                     // Insert a glottal stop and move forward
                     drule("Insert glottal stop between two stressed vowels with space between them");
                     Insert(X, 31, mem59, 0); // 31 = 'Q'
-                    pos++;
-                    continue;
                 }
             }
         } else if (p == pR) { // 'R'
