@@ -122,6 +122,20 @@ void interpolate(unsigned char width, unsigned char table, unsigned char frame, 
     }
 }
 
+void interpolate_pitch(unsigned char width, unsigned char pos, unsigned char mem49, unsigned char phase3) {
+    // unlike the other values, the pitches[] interpolates from 
+    // the middle of the current phoneme to the middle of the 
+    // next phoneme
+        
+    // half the width of the current and next phoneme
+    unsigned char cur_width  = phonemeLengthOutput[pos] / 2;
+    unsigned char next_width = phonemeLengthOutput[pos+1] / 2;
+    // sum the values
+    width = cur_width + next_width;
+    unsigned char pitch = pitches[next_width + mem49] - pitches[mem49- cur_width];
+    interpolate(width, 168, phase3, pitch);
+}
+
 
 unsigned char CreateTransitions()
 {
@@ -162,7 +176,9 @@ unsigned char CreateTransitions()
 		unsigned char transition   = phase1 + phase2; // total transition?
 		
 		if (((transition - 2) & 128) == 0) {
-            unsigned table = 168;
+
+            interpolate_pitch(transition, pos, mem49, phase3);
+            unsigned table = 169;
             while (table < 175) {
                 // tables:
                 // 168  pitches[]
@@ -173,25 +189,8 @@ unsigned char CreateTransitions()
                 // 173  amplitude2
                 // 174  amplitude3
                 
-                // number of frames to interpolate over
-                unsigned char width = transition;
-            
-                unsigned char mem53;
-                if (table == 168) {     // pitch
-                    // unlike the other values, the pitches[] interpolates from 
-                    // the middle of the current phoneme to the middle of the 
-                    // next phoneme
-                      
-                    // half the width of the current and next phoneme
-                    unsigned char cur_width  = phonemeLengthOutput[pos] / 2;
-                    unsigned char next_width = phonemeLengthOutput[pos+1] / 2;
-                    // sum the values
-                    width = cur_width + next_width;
-                    mem53 = pitches[next_width + mem49] - pitches[mem49- cur_width];
-                } else {
-                    mem53 = Read(table, speedcounter) - Read(table, phase3);
-                }
-                interpolate(width, table, phase3, mem53);
+                unsigned char value = Read(table, speedcounter) - Read(table, phase3);
+                interpolate(transition, table, phase3, value);
                 table++;
             }
         }
