@@ -506,30 +506,29 @@ void Parser2() {
 		X = pos;
         unsigned char prior = phonemeindex[pos-1];
 
-        if ((pf & FLAG_DIPTHONG) || p == 78 || p == 79 || p == 80) {
-            if ((pf & FLAG_DIPTHONG)) { // Check for DIPTHONG
-                // RULE: 
-                //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
-                //       <DIPTHONG NOT ENDING WITH WX> -> <DIPTHONG NOT ENDING WITH WX> YX
-                // Example: OIL, COW
+        if ((pf & FLAG_DIPTHONG)) { // Check for DIPTHONG
+            // RULE: 
+            //       <DIPTHONG ENDING WITH WX> -> <DIPTHONG ENDING WITH WX> WX
+            //       <DIPTHONG NOT ENDING WITH WX> -> <DIPTHONG NOT ENDING WITH WX> YX
+            // Example: OIL, COW
                 
-                // If ends with IY, use YX, else use WX
-                A = (pf & FLAG_DIP_YX) ? 21 : 20; // 'WX' = 20 'YX' = 21
+            // If ends with IY, use YX, else use WX
+            A = (pf & FLAG_DIP_YX) ? 21 : 20; // 'WX' = 20 'YX' = 21
                 
-                // Insert at WX or YX following, copying the stress
-                if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
-                if (A==21) drule("insert YX following dipthong ending in IY sound");
-                Insert(pos+1, A, mem59, stress[pos]);
+            // Insert at WX or YX following, copying the stress
+            if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
+            if (A==21) drule("insert YX following dipthong ending in IY sound");
+            Insert(pos+1, A, mem59, stress[pos]);
                 
-                if (p == 53 || p == 42 || p == 44) {
-                    if (p == 53) rule_alveolar_uw(pos);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
-                    else if (p == 42) rule_ch(pos,mem59); // Example: CHEW
-                    else if (p == 44) rule_j(pos,mem59);  // Example: JAY
-                }
-            } else if (p == 78) ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");       // Example: MEDDLE
-            else if (p == 79) ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M"); // Example: ASTRONOMY
-            else if (p == 80) ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N"); // Example: FUNCTION
-        } else if ((pf & FLAG_VOWEL) && stress[X]) {
+            if (p == 53 || p == 42 || p == 44) {
+                if (p == 53) rule_alveolar_uw(pos);   // Example: NEW, DEW, SUE, ZOO, THOO, TOO
+                else if (p == 42) rule_ch(pos,mem59); // Example: CHEW
+                else if (p == 44) rule_j(pos,mem59);  // Example: JAY
+            }
+        } else if (p == 78) ChangeRule(X, 13, 24, mem59, stress[X],"UL -> AX L");       // Example: MEDDLE
+        else if (p == 79) ChangeRule(X, 13, 27, mem59, stress[X], "UM -> AX M"); // Example: ASTRONOMY
+        else if (p == 80) ChangeRule(X, 13, 28, mem59, stress[X], "UN -> AX N"); // Example: FUNCTION
+        else if ((pf & FLAG_VOWEL) && stress[X]) {
             // RULE:
             //       <STRESSED VOWEL> <SILENCE> <STRESSED VOWEL> -> <STRESSED VOWEL> <SILENCE> Q <VOWEL>
             // EXAMPLE: AWAY EIGHT
