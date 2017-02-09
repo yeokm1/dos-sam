@@ -484,7 +484,10 @@ void rule_g(unsigned char pos) {
 }
 
 
-
+void change(unsigned char pos, unsigned char val, const char * rule) {
+    drule(rule);
+    phonemeindex[pos] = val;
+}
 
 
 void Parser2() {
@@ -501,7 +504,6 @@ void Parser2() {
 			continue;
 		}
 
-        unsigned char A  = p;
         unsigned char pf = flags[p];
 		X = pos;
         unsigned char prior = phonemeindex[pos-1];
@@ -513,7 +515,7 @@ void Parser2() {
             // Example: OIL, COW
                 
             // If ends with IY, use YX, else use WX
-            A = (pf & FLAG_DIP_YX) ? 21 : 20; // 'WX' = 20 'YX' = 21
+            unsigned char A = (pf & FLAG_DIP_YX) ? 21 : 20; // 'WX' = 20 'YX' = 21
                 
             // Insert at WX or YX following, copying the stress
             if (A==20) drule("insert WX following dipthong NOT ending in IY sound");
@@ -538,7 +540,7 @@ void Parser2() {
                 unsigned char Y = phonemeindex[X];
                 
                 // And VOWEL flag to current phoneme's flags
-                A = (Y == END) ? 0 : flags[Y] & FLAG_VOWEL;
+                unsigned char A = (Y == END) ? 0 : flags[Y] & FLAG_VOWEL;
                 if (A && stress[X]) { // If following phonemes is not a pause, and is not stressed
                     // Insert a glottal stop and move forward
                     drule("Insert glottal stop between two stressed vowels with space between them");
@@ -547,37 +549,25 @@ void Parser2() {
             }
         } else if (p == pR) { // 'R'
             // RULES FOR PHONEMES BEFORE R
-            if (prior == pT) { // Example: TRACK
-                drule("T R -> CH R");
-                phonemeindex[pos-1] = 42;
-            } else if (prior == pD) { // Example: DRY
-                drule("D R -> J R");
-                phonemeindex[pos-1] = 44;
-            } else if (flags[prior] & FLAG_VOWEL) { // Example: ART
-                drule("<VOWEL> R -> <VOWEL> RX");
-                phonemeindex[pos] = 18;  // 'RX'
-            }
-        } else if (p == 24 && (flags[prior] & FLAG_VOWEL)) { // 'L' + prior has VOWEL flag set
-            // Example: ALL
-            drule("<VOWEL> L -> <VOWEL> LX");
-            phonemeindex[X] = 19;     // 'LX'
-        } else if (prior == 60 && p == 32) { // 'G' 'S'
+            if (prior == pT) change(pos-1,42, "T R -> CH R"); // Example: TRACK
+            else if (prior == pD) change(pos-1,44, "D R -> J R"); // Example: DRY
+            else if (flags[prior] & FLAG_VOWEL) change(pos, 18, "<VOWEL> R -> <VOWEL> RX"); // Example: ART
+        } else if (p == 24 && (flags[prior] & FLAG_VOWEL)) change(X, 19, "<VOWEL> L -> <VOWEL> LX"); // Example: ALL
+        else if (prior == 60 && p == 32) { // 'G' 'S'
             // Can't get to fire -
             //       1. The G -> GX rule intervenes
             //       2. Reciter already replaces GS -> GZ
-            drule("G S -> G Z");
-            phonemeindex[pos] = 38;    // 'Z'
+            change(pos, 38, "G S -> G Z");
         } else if (p == 60) rule_g(pos);
 		else {
             if (p == 72) {  // 'K'
-                //             K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
+                // K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>
                 // Example: COW
                 unsigned char Y = phonemeindex[pos+1];
                 // If at end, replace current phoneme with KX
                 if ((flags[Y] & FLAG_DIP_YX)==0 || Y==END) { // VOWELS AND DIPTHONGS ENDING WITH IY SOUND flag set?
-                    drule("K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>");
-                    phonemeindex[pos] = 75;  // 'KX'
-                    p = 75;
+                    change(pos, 75, "K <VOWEL OR DIPTHONG NOT ENDING WITH IY> -> KX <VOWEL OR DIPTHONG NOT ENDING WITH IY>");
+                    p  = 75;
                     pf = flags[p];
                 }
             }
@@ -607,21 +597,17 @@ void Parser2() {
                 //       <UNSTRESSED VOWEL> D <PAUSE>  -> <UNSTRESSED VOWEL> DX <PAUSE>
                 // Example: PARTY, TARDY
                 
+                unsigned char A;
                 if (flags[phonemeindex[X-1]] & FLAG_VOWEL) {
                     if ((A = phonemeindex[++X])) {
                         if (flags[A] & FLAG_VOWEL) { // pause
                             // FIXME: How does a pause get stressed?
-                            if (stress[X] == 0) { // unstressed
-                                // Set phonemes to DX
-                                drule("Soften T or D following vowel or ER and preceding a pause -> DX");
-                                phonemeindex[pos] = 30;       // 'DX'
-                            }
+                            if (stress[X] == 0) change(pos,30, "Soften T or D following vowel or ER and preceding a pause -> DX");
                         }
                     } else {
-                        A = phonemeindex[X+1];
-                        if (A != END && (flags[A] & FLAG_VOWEL)) { // Next phoneme is a vowel or ER
-                            drule("Soften T or D following vowel or ER and preceding a pause -> DX");
-                            if (A != 0) phonemeindex[pos] = 30;  // 'DX'
+                        p = phonemeindex[X+1];
+                        if (p != END && p && (flags[p] & FLAG_VOWEL)) { // Next phoneme is a vowel or ER
+                            change(pos,30, "Soften T or D following vowel or ER and preceding a pause -> DX");
                         }
                     }
                 }
@@ -746,12 +732,8 @@ void AdjustLengths() {
                 X = loopIndex;
             }
         } else if ((flags[index] & FLAG_LIQUIC)) { // liquic consonant?
-            // WH, R*, L*, W*, Y*, Q*, Z*, ZH, V*, DH, J*, **, 
-
             // RULE: <VOICED NON-VOWEL> <DIPTHONG>
             //       Decrease <DIPTHONG> by 2
-            // R*, L*, W*, Y*
-                           
             index = phonemeindex[X-1]; // prior phoneme;
 
             // FIXME: The debug code here breaks the rule.
