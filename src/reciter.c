@@ -37,33 +37,37 @@ unsigned char GetRuleByte(unsigned short mem62, unsigned char Y) {
 }
 
 int handle_ch2(unsigned char ch, unsigned char mem) {
+    X = mem;
+    unsigned char tmp = tab36376[inputtemp[mem]];
     if (ch == ' ') {
-        if(Code37055(mem,128)) return 1;
+        if(tmp & 128) return 1;
     } else if (ch == '#') {
-        if(!Code37055(mem, 64)) return 1;
+        if(!(tmp & 64)) return 1;
     } else if (ch == '.') {
-        if(!Code37055(mem,8)) return 1;
+        if(!(tmp & 8)) return 1;
     } else if (ch == '^') {
-        if(!Code37055(mem,32)) return 1;
+        if(!(tmp & 32)) return 1;
     } else return -1;
     return 0;
 }
 
 
 int handle_ch(unsigned char A, unsigned char mem) {
+    X = mem;
+    unsigned char tmp = tab36376[inputtemp[X]];
     if (A == ' ') {
-        if (Code37055(mem, 128) != 0) return 1;
+        if ((tmp & 128) != 0) return 1;
     } else if (A == '#') {
-        if (Code37055(mem, 64) == 0) return 1;
+        if ((tmp & 64) == 0) return 1;
     } else if (A == '.') {
-        if(Code37055(mem, 8) == 0) return 1;
+        if((tmp & 8) == 0) return 1;
     } else if (A == '&') {
-        if(Code37055(mem, 16) == 0) {
+        if((tmp & 16) == 0) {
             if (inputtemp[X] != 72) return 1;
             ++X;
         }
     } else if (A == '^') {
-        if (Code37055(mem, 32) == 0) return 1;
+        if ((tmp & 32) == 0) return 1;
     } else if (A == '+') {
         X = mem;
         A = inputtemp[X];
@@ -190,8 +194,10 @@ pos36700:
             case '&':
                 if (!Code37055(mem59-1,16)) {
                     if (inputtemp[X] != 'H') r = 1;
-                    A = inputtemp[--X];
-                    if ((A != 'C') && (A != 'S')) r = 1;
+                    else {
+                        A = inputtemp[--X];
+                        if ((A != 'C') && (A != 'S')) r = 1;
+                    }
                 }
                 break;
                 
@@ -257,23 +263,28 @@ pos37184:
                 mem65 = Y;
                 mem57 = GetRuleByte(mem62, Y);
                 if((tab36376[mem57] & 128) == 0) break;
-                if (inputtemp[mem58+1] != mem57) goto pos36700;
+                if (inputtemp[mem58+1] != mem57) {
+                    r = 1;
+                    break;
+                }
                 ++mem58;
             }
 
-            A = mem57;
-            r = 0;
-            if (A == '@') {
-                if(Code37055(mem58+1, 4) == 0) {
-                    A = inputtemp[X];
-                    if ((A != 82) && (A != 84) && 
-                        (A != 67) && (A != 83)) r = 1;
-                } 
-                r = -2;
-            } else if (A == ':') {
-                while (Code37055(mem58+1, 32)) mem58 = X;
-                r = -2;
-            } else r = handle_ch(A, mem58+1);
+            if (r == 0) {
+                A = mem57;
+                if (A == '@') {
+                    if(Code37055(mem58+1, 4) == 0) {
+                        A = inputtemp[X];
+                        if ((A != 82) && (A != 84) && 
+                            (A != 67) && (A != 83)) r = 1;
+                    } else {
+                        r = -2;
+                    }
+                } else if (A == ':') {
+                    while (Code37055(mem58+1, 32)) mem58 = X;
+                    r = -2;
+                } else r = handle_ch(A, mem58+1);
+            }
 
             if (r == 1) goto pos36700;
             if (r == -2) { 
