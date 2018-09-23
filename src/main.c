@@ -12,6 +12,20 @@
 #include <SDL_audio.h>
 #endif
 
+
+// Approximations of some Windows functions to ease portability
+#if defined __GNU_LIBRARY__ || defined __GLIBC__
+static int min(int l, int r) { return l < r ? l : r; }
+static void strcat_s(char * dest, int size, char * str) {
+    unsigned int dlen = strlen(dest);
+    if (dlen >= size-1) return;
+    strncat(dest+dlen, str, size - dlen - 1);
+}
+void fopen_s(FILE ** f, const char * filename, const char * mode) {
+    *f = fopen(filename,mode);
+}
+#endif
+
 void WriteWav(char* filename, char* buffer, int bufferlength)
 {
 	unsigned int filesize;
