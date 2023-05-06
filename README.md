@@ -1,4 +1,50 @@
-SAM
+dos-sam
+===
+
+This is a DOS text-to-speech program that was first created by [s-macke](https://github.com/s-macke/SAM) through reverse-engineering then improved by [vidarh](https://github.com/vidarh/SAM).
+
+This version has been slightly modified from vidarh's version to be compilable using OpenWatcom 2.0 to target DOS and Win95. SDL feature has been disabled so this program can only generate WAV files.
+
+## Usage
+
+Grab the binaries from the releases folder.
+
+For basic use run the program with these parameters.
+
+```bash
+# To generate a output.wav file reading the words "hello world".
+dos-sam.exe -wav output.wav hello world
+```
+
+More options are available by just running the `dos-sam.exe` standalone or reading the original readme file attached below.
+
+## Compilation
+
+To compile this application, you have to use Open Watcom (OWC) 2.0 beta which you can download from [here](https://github.com/open-watcom/open-watcom-v2/releases/tag/2023-04-01-Build). Open Watcom 2.0 for 64-bit Windows which was released on 2023-04-01 02:52:44 is used.
+
+During installation, Open Watcom may prompt to install the environment variables. I chose to not do that to avoid having those variables being permanent. Instead I use a batch file to set the variables whenever I need to compile.
+
+The program is compiled via a Makefile. By default the Makefile is set to compile DOS using the open-source [DOS/32](https://en.wikipedia.org/wiki/DOS/32) extender.
+
+```bash
+# Open cmd.exe
+cd src
+
+# To set environment variables assuming OWC is installed to C:\WATCOM2
+20setenv.bat
+
+# To compile
+wmake
+
+# To clean
+wmake clean
+```
+
+A 32-bit extender was used due to memory requirements as well as the the original code was written with a 32-bit platform in mind. To compile for other platforms, uncomment the specific parts in the Makefile.
+
+`DOS32A.EXE` was obtained from [here](https://www.ibiblio.org/pub/micro/pc-stuff/freedos/files/distributions/1.2/repos/pkg-html/dos32a.html).
+
+# SAM (Original README file below) 
 ===
 
 Software Automatic Mouth - Tiny Speech Synthesizer 

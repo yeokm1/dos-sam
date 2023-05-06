@@ -63,6 +63,7 @@ int SAMMain();
 void CopyStress();
 void SetPhonemeLength();
 void AdjustLengths();
+void AdjustLengths2();
 void Code41240();
 void Insert(unsigned char position, unsigned char mem60, unsigned char mem59, unsigned char mem58);
 void InsertBreath();
@@ -600,6 +601,7 @@ void Parser2() {
 //         <VOICED STOP CONSONANT> {optional silence} <STOP CONSONANT> - shorten both to 1/2 + 1
 //         <LIQUID CONSONANT> <DIPTHONG> - decrease by 2
 //
+
 void AdjustLengths() {
     // LENGTHEN VOWELS PRECEDING PUNCTUATION
     //
@@ -609,7 +611,7 @@ void AdjustLengths() {
     // increased by (length * 1.5) + 1
 
     // loop index
-	{
+
 	unsigned char X = 0;
 	unsigned char index;
 
@@ -632,7 +634,7 @@ void AdjustLengths() {
 			index = phonemeindex[X];
 
 			// test for fricative/unvoiced or not voiced
-			if(!(flags[index] & FLAG_FRICATIVE) || (flags[index] & FLAG_VOICED)) {     //nochmal überprüfen
+			if(!(flags[index] & FLAG_FRICATIVE) || (flags[index] & FLAG_VOICED)) {     //nochmal ï¿½berprï¿½fen
 				unsigned char A = phonemeLength[X];
 				// change phoneme length to (length * 1.5) + 1
                 drule_pre("Lengthen <FRICATIVE> or <VOICED> between <VOWEL> and <PUNCTUATION> by 1.5",X);
@@ -642,9 +644,12 @@ void AdjustLengths() {
 		} while (++X != loopIndex);
 		X++;
 	}  // while
-	}
+	
+    AdjustLengths2();
 
-    // Similar to the above routine, but shorten vowels under some circumstances
+}
+
+void AdjustLengths2() {
 
     // Loop through all phonemes
 	unsigned char loopIndex=0;

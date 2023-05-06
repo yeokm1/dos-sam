@@ -14,8 +14,8 @@
 
 
 // Approximations of some Windows functions to ease portability
-#if defined __GNU_LIBRARY__ || defined __GLIBC__
-static int min(int l, int r) { return l < r ? l : r; }
+//#if defined __GNU_LIBRARY__ || defined __GLIBC__
+static int min_sam(int l, int r) { return l < r ? l : r; }
 static void strcat_s(char * dest, int size, char * str) {
     unsigned int dlen = strlen(dest);
     if (dlen >= size-1) return;
@@ -24,7 +24,7 @@ static void strcat_s(char * dest, int size, char * str) {
 void fopen_s(FILE ** f, const char * filename, const char * mode) {
     *f = fopen(filename,mode);
 }
-#endif
+//#endif
 
 void WriteWav(char* filename, char* buffer, int bufferlength)
 {
@@ -106,7 +106,7 @@ void PrintUsage()
 	printf("UL           sett(le) (=AXL)           T         talk		\n");
 	printf("UM           astron(omy) (=AXM)        K         cake		\n");
 	printf("UN           functi(on) (=AXN)         CH        speech		\n");
-	printf("Q            kitt-en (glottal stop)    /H        a(h)ead	\n");	
+	printf("Q            kitt-en (glottal stop)    /H        a(h)ead	\n");
 }
 
 #ifdef USESDL
